@@ -1,11 +1,12 @@
 <script setup>
 // Prüfansicht: links die PDF-Seite mit den erkannten Zeilen, rechts der erfasste Text dieser Seite.
 // Ein Klick auf eine Zeile im PDF markiert sie im Text, ein Klick im Text markiert die Zeile im PDF.
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import PageView from './PageView.vue';
 import { documentState } from '../capture/documentStore.js';
 import { UNCERTAIN_SCORE } from '../capture/options.js';
+import { useResizable } from './useResizable.js';
 
 const SOURCE_LABEL = {
     text: { text: 'Eingebetteter Text', cls: 'badge-info' },
@@ -22,6 +23,16 @@ const showRegions = ref(true);
 const activeBox = ref(-1);
 const hint = ref('');
 const textarea = ref(null);
+const splitBox = ref(null);
+const layout = useResizable('pruefansicht', { ratio: 0.5 });
+
+// Nebeneinander erst ab 1024 px Breite
+const media = window.matchMedia('(min-width: 1024px)');
+const wide = ref(media.matches);
+const onMedia = event => { wide.value = event.matches; };
+media.addEventListener('change', onMedia);
+onBeforeUnmount(() => media.removeEventListener('change', onMedia));
+onMounted(() => layout.fitToWindow(splitBox.value));
 
 const pages = computed(() => documentState.pages);
 const page = computed(() => pages.value[index.value]);
@@ -131,8 +142,19 @@ function reset() {
       <span>Klick auf eine Zeile markiert sie im Text und umgekehrt.</span>
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-2">
-      <div class="h-[72vh] overflow-auto rounded-box bg-base-300 p-3">
+    <!-- Breit: PDF und Text nebeneinander, Trenner seitlich und Höhe unten ziehbar.
+         Schmal: untereinander. -->
+    <div
+      ref="splitBox"
+      class="flex gap-0"
+      :class="wide ? 'flex-row' : 'flex-col gap-4'"
+      :style="wide ? { height: `${layout.size.value}px` } : null"
+    >
+      <div
+        class="overflow-auto rounded-box bg-base-300 p-3"
+        :class="wide ? 'min-w-0' : 'h-[70vh]'"
+        :style="wide ? { width: `${layout.split.value * 100}%` } : null"
+      >
         <PageView
           :pdf="documentState.pdf"
           :page="page"
@@ -142,7 +164,22 @@ function reset() {
           @select="selectBox"
         />
       </div>
-      <div class="flex h-[72vh] flex-col gap-2">
+      <div
+        v-if="wide"
+        class="group flex w-4 shrink-0 cursor-col-resize items-center justify-center focus:outline-none"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Breite von PDF und Text ändern"
+        :aria-valuenow="Math.round(layout.split.value * 100)"
+        tabindex="0"
+        title="Ziehen, um die Breite zu ändern (Doppelklick: zurücksetzen)"
+        @pointerdown="layout.startSplit($event, splitBox)"
+        @keydown="layout.splitKey"
+        @dblclick="layout.reset()"
+      >
+        <span class="h-16 w-1 rounded-full bg-base-content/25 transition-colors group-hover:bg-primary group-focus:bg-primary" />
+      </div>
+      <div class="flex min-w-0 flex-1 flex-col gap-2" :class="{ 'h-[70vh]': !wide }">
         <textarea
           ref="textarea"
           v-model="page.text"
@@ -157,6 +194,20 @@ function reset() {
           <button v-if="edited" class="btn btn-xs btn-ghost ml-auto" @click="reset">Änderungen dieser Seite verwerfen</button>
         </div>
       </div>
+    </div>
+    <div
+      v-if="wide"
+      class="group -mt-1 flex h-4 cursor-row-resize items-center justify-center focus:outline-none"
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label="Höhe der Prüfansicht ändern"
+      tabindex="0"
+      title="Ziehen, um die Höhe zu ändern (Doppelklick: zurücksetzen)"
+      @pointerdown="layout.startHeight"
+      @keydown="layout.heightKey"
+      @dblclick="layout.reset()"
+    >
+      <span class="h-1 w-16 rounded-full bg-base-content/25 transition-colors group-hover:bg-primary group-focus:bg-primary" />
     </div>
   </div>
 </template>

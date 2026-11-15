@@ -110,7 +110,7 @@ function download() {
           </div>
           <textarea
             v-model="input"
-            class="textarea h-[60vh] w-full resize-none font-mono text-sm leading-6"
+            class="textarea h-[65vh] min-h-48 w-full resize-y font-mono text-sm leading-6"
             placeholder="Text hier einfügen, z. B. eine Passage aus einem PDF oder einer Einvernahme …"
             spellcheck="false"
             aria-label="Eingabe"
@@ -135,14 +135,14 @@ function download() {
           <p v-if="error" class="text-sm text-error">{{ error }}</p>
           <div
             v-if="highlight && tokens"
-            class="h-[60vh] overflow-auto whitespace-pre-wrap rounded-field border border-base-300 p-3 font-mono text-sm leading-6"
+            class="h-[65vh] min-h-48 resize-y overflow-auto whitespace-pre-wrap rounded-field border border-base-300 p-3 font-mono text-sm leading-6"
             aria-label="Ergebnis mit hervorgehobenen Änderungen"
             data-testid="ergebnis"
           ><template v-for="(token, i) in tokens" :key="i"><mark v-if="token.changed" class="rounded bg-warning/25 text-inherit">{{ token.text }}</mark><template v-else>{{ token.text }}</template></template></div>
           <textarea
             v-else
             v-model="output"
-            class="textarea h-[60vh] w-full resize-none font-mono text-sm leading-6"
+            class="textarea h-[65vh] min-h-48 w-full resize-y font-mono text-sm leading-6"
             spellcheck="false"
             aria-label="Ergebnis"
           />

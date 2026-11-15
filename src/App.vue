@@ -22,7 +22,7 @@ const commitUrl = `${BUILD.repository}/commit/${BUILD.commit}`;
 <template>
   <div class="flex min-h-screen flex-col bg-base-200">
     <header class="border-b border-base-300 bg-base-100">
-      <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3">
+      <div class="mx-auto flex max-w-[1800px] flex-wrap items-center gap-4 px-4 py-3">
         <div class="flex items-center gap-2">
           <img src="/icon.svg" alt="" class="size-7" />
           <span class="font-semibold">PDF einfügen</span>
@@ -43,7 +43,7 @@ const commitUrl = `${BUILD.repository}/commit/${BUILD.commit}`;
       </div>
     </header>
 
-    <div v-if="connection.gatekeeper !== 'aktiv' && connection.gatekeeper !== 'start'" class="mx-auto mt-4 w-full max-w-6xl px-4">
+    <div v-if="connection.gatekeeper !== 'aktiv' && connection.gatekeeper !== 'start'" class="mx-auto mt-4 w-full max-w-[1800px] px-4">
       <div v-if="connection.gatekeeper === 'entwicklung'" role="alert" class="alert alert-info alert-soft text-sm">
         Entwicklungsserver: Der Torwächter ist nicht aktiv, das Netzwerk wird nicht gesperrt.
         Zum Testen <code>npm run build &amp;&amp; npm run preview</code> verwenden.
@@ -54,12 +54,12 @@ const commitUrl = `${BUILD.repository}/commit/${BUILD.commit}`;
       </div>
     </div>
 
-    <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+    <main class="mx-auto w-full max-w-[1800px] flex-1 px-4 py-6">
       <KeepAlive><component :is="current" @navigate="active = $event" /></KeepAlive>
     </main>
 
     <footer class="border-t border-base-300 bg-base-100 text-xs opacity-80">
-      <div class="mx-auto flex max-w-6xl flex-wrap gap-x-4 gap-y-1 px-4 py-3">
+      <div class="mx-auto flex max-w-[1800px] flex-wrap gap-x-4 gap-y-1 px-4 py-3">
         <span>Version {{ BUILD.version }}</span>
         <span>
           Build
