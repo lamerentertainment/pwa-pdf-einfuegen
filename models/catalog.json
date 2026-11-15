@@ -3,8 +3,16 @@
   "models": [
     {
       "id": "ppocr-v5-latin",
-      "name": "Texterkennung PP-OCRv5 (lateinische Schrift)",
-      "purpose": "Erkennt Text auf gescannten Seiten. Deckt Deutsch inkl. Umlaute und ß ab.",
+      "name": "Texterkennung (PP-OCRv5)",
+      "purpose": "Liest den Text auf gescannten Seiten.",
+      "capabilities": [
+        "Liest Text auf gescannten Seiten, auch bei leicht schief eingelegten Blättern; deckt Deutsch mit Umlauten und ß ab.",
+        "Ersetzt die oft fehlerhafte Textebene von Scannern («lch» statt «Ich», «lhnen» statt «Ihnen»).",
+        "Gibt für jede Zeile an, wie sicher sie erkannt wurde; unsichere Zeilen markiert die Prüfansicht orange."
+      ],
+      "without": "Bei gescannten Seiten bleibt nur der Text, den der Scanner selbst eingebettet hat: oft fehlerhaft oder gar keiner. Digitale Seiten funktionieren ohne dieses Modell.",
+      "usage": "Wird beim Einlesen automatisch für alle gescannten Seiten verwendet, sobald es installiert ist.",
+      "option": null,
       "stage": 1,
       "license": "Apache-2.0",
       "publisher": "PaddlePaddle",
@@ -35,8 +43,16 @@
     },
     {
       "id": "pp-doclayout-plus-l",
-      "name": "Layouterkennung PP-DocLayout_plus-L",
-      "purpose": "Erkennt Spalten, Überschriften, Tabellen, Kopf- und Fusszeilen und bringt den Text in die richtige Lesereihenfolge. Optional.",
+      "name": "Layoutmodell (PP-DocLayout_plus-L)",
+      "purpose": "Erkennt den Aufbau gescannter Seiten. Optional.",
+      "capabilities": [
+        "Erkennt Kopf- und Fusszeilen sowie Seitenzahlen auf gescannten Seiten und lässt sie im Text weg, auch wenn sie nur auf einer Seite vorkommen.",
+        "Erkennt Bereiche wie Überschriften, Textblöcke, Tabellen und Bilder; die Prüfansicht zeigt sie als gestrichelte «Layoutbereiche»."
+      ],
+      "without": "Kopf- und Fusszeilen, die sich auf mehreren Seiten wiederholen, werden trotzdem erkannt und weggelassen (anhand der Wiederholung, ohne Modell).",
+      "usage": "Wirkt nur zusammen mit der Texterkennung und nur auf gescannten Seiten, wenn «Layoutmodell verwenden» eingeschaltet ist. Braucht pro Seite etwa eine Sekunde zusätzlich.",
+      "option": "layout",
+      "requires": "ppocr-v5-latin",
       "stage": 1,
       "license": "Apache-2.0",
       "publisher": "PaddlePaddle",

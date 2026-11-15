@@ -1,26 +1,38 @@
 <script setup>
 import { computed, onActivated, onMounted, ref } from 'vue';
-import { ArrowUpTrayIcon, ClipboardDocumentIcon, ArrowDownTrayIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { ArrowUpTrayIcon, ChevronDownIcon, ClipboardDocumentIcon, ArrowDownTrayIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import ReviewPane from '../components/ReviewPane.vue';
 import { cancel, closeDocument, documentState, openFile } from '../capture/documentStore.js';
 import { joinPages } from '../capture/joinPages.js';
 import ocrService, { LAYOUT_MODEL_ID, OCR_MODEL_ID } from '../ocr/ocrService.js';
 import { EXAMPLES, exampleUrl, loadExample } from '../capture/examples.js';
+import { formatBytes, models, modelSize } from '../models/modelStore.js';
+import ModelInfo from '../components/ModelInfo.vue';
 
 const emit = defineEmits(['navigate']);
 
 const installed = ref({ ocr: false, layout: false });
+// Status aller Modelle der Erfassung, nach ID
+const status = ref({});
+const captureModels = models.filter(model => model.stage === 1);
+const isInstalledId = id => Boolean(status.value[id]);
+const isInstalled = model => isInstalledId(model.id);
+const optionAvailable = model => isInstalled(model) && (!model.requires || isInstalledId(model.requires));
 const dragging = ref(false);
 const fileInput = ref(null);
 const pageMarkers = ref(false);
 const copied = ref(false);
+const exampleMenu = ref(null);
 
 async function refreshModels() {
+    status.value = Object.fromEntries(await Promise.all(
+        captureModels.map(async model => [model.id, await ocrService.isInstalled(model.id)]),
+    ));
     installed.value = {
         ocr: await ocrService.isInstalled(OCR_MODEL_ID),
         layout: await ocrService.isInstalled(LAYOUT_MODEL_ID),
     };
-    if (!installed.value.layout) documentState.options.layout = false;
+    if (!installed.value.layout || !installed.value.ocr) documentState.options.layout = false;
 }
 onMounted(refreshModels);
 onActivated(refreshModels);
@@ -51,6 +63,7 @@ function onDrop(event) {
 }
 
 async function openExample(example) {
+    if (exampleMenu.value) exampleMenu.value.open = false;
     try {
         openFile(await loadExample(example));
     } catch (err) {
@@ -103,80 +116,129 @@ function noticeText(notice) {
           Das PDF verlässt dabei deinen Browser nicht und wird nirgends gespeichert.
         </p>
 
-        <div
-          class="flex flex-col items-center justify-center gap-3 rounded-box border-2 border-dashed p-10 text-center transition-colors"
-          :class="dragging ? 'border-primary bg-base-200' : 'border-base-300'"
-          @dragover.prevent="dragging = true"
-          @dragleave.prevent="dragging = false"
-          @drop.prevent="onDrop"
-        >
-          <template v-if="documentState.busy">
-            <p class="text-sm">{{ documentState.status }}</p>
-            <progress class="progress w-full max-w-md" :value="Math.round(documentState.progress * 100)" max="100" />
-            <button class="btn btn-sm" @click="cancel">Abbrechen</button>
-          </template>
-          <template v-else>
-            <ArrowUpTrayIcon class="size-8 opacity-50" />
-            <p class="text-sm">PDF hierher ziehen oder</p>
-            <button class="btn btn-primary btn-sm" @click="fileInput.click()">PDF auswählen</button>
-            <input ref="fileInput" type="file" accept="application/pdf,.pdf" class="hidden" @change="pick($event.target.files); $event.target.value = ''" />
-          </template>
-        </div>
+        <!-- 1. Modelle und Einstellungen: vor dem Einlesen festlegen -->
+        <div class="space-y-4 rounded-box border border-base-300 p-4">
+          <h3 class="font-semibold">1 · Modelle und Einstellungen</h3>
 
-        <p v-if="documentState.error" class="text-sm text-error">{{ documentState.error }}</p>
+          <div>
+            <p class="mb-2 text-sm opacity-80">
+              <strong>Modelle</strong> wirken beim Einlesen und nur auf gescannten Seiten. Digitale PDFs brauchen keines.
+            </p>
+            <div class="grid gap-3 xl:grid-cols-2">
+              <div
+                v-for="model in captureModels"
+                :key="model.id"
+                class="flex flex-col gap-3 rounded-box border p-3"
+                :class="isInstalled(model) ? 'border-success/40 bg-success/5' : 'border-base-300'"
+                :data-model="model.id"
+              >
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p class="font-medium">{{ model.name }}</p>
+                    <p class="text-xs opacity-70">{{ model.purpose }} {{ formatBytes(modelSize(model)) }}.</p>
+                  </div>
+                  <span class="badge badge-sm whitespace-nowrap" :class="isInstalled(model) ? 'badge-success' : 'badge-warning'">
+                    {{ isInstalled(model) ? '✓ installiert' : 'nicht installiert' }}
+                  </span>
+                </div>
+                <ModelInfo :model="model" compact />
+                <div class="mt-auto flex flex-wrap items-center gap-3 border-t border-base-300 pt-2 text-sm">
+                  <template v-if="model.option">
+                    <label class="flex items-center gap-2" :class="{ 'opacity-50': !optionAvailable(model) }">
+                      <input
+                        v-model="documentState.options[model.option]"
+                        type="checkbox"
+                        class="checkbox checkbox-sm"
+                        :disabled="!optionAvailable(model)"
+                      />
+                      Layoutmodell verwenden
+                    </label>
+                    <span v-if="isInstalled(model) && model.requires && !isInstalledId(model.requires)" class="text-xs text-warning">
+                      braucht zusätzlich die Texterkennung
+                    </span>
+                  </template>
+                  <span v-else-if="isInstalled(model)" class="text-xs opacity-70">Wird automatisch für gescannte Seiten verwendet.</span>
+                  <button v-if="!isInstalled(model)" class="btn btn-xs ml-auto" @click="emit('navigate', 'modelle')">Installieren …</button>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <div v-if="!documentState.busy" class="space-y-2">
-          <h3 class="text-sm font-semibold">Zum Ausprobieren</h3>
-          <div class="grid gap-3 md:grid-cols-2">
-            <div v-for="example in EXAMPLES" :key="example.file" class="flex flex-col gap-2 rounded-box border border-base-300 p-3">
-              <div class="flex items-start justify-between gap-2">
-                <span class="font-medium">{{ example.title }}</span>
-                <span v-if="example.needsOcr" class="badge badge-sm" :class="installed.ocr ? 'badge-success' : 'badge-warning'">
-                  {{ installed.ocr ? 'Texterkennung bereit' : 'braucht Texterkennung' }}
-                </span>
-              </div>
-              <p class="text-xs opacity-75">{{ example.description }}</p>
-              <p v-if="example.needsOcr && !installed.ocr" class="text-xs opacity-75">
-                Ohne Modell zeigt die App nur die fehlerhafte Textebene des Scanners.
-                <button class="link" @click="emit('navigate', 'modelle')">Modell installieren</button>
-              </p>
-              <div class="mt-auto flex items-center gap-3">
-                <button class="btn btn-sm" @click="openExample(example)">Öffnen</button>
-                <a class="link text-xs" :href="exampleUrl(example)" :download="example.file">Herunterladen</a>
-              </div>
+          <div>
+            <p class="mb-2 text-sm opacity-80">
+              <strong>Textaufbau</strong> braucht kein Modell und lässt sich später in der Prüfansicht ändern, ohne das PDF neu einzulesen.
+            </p>
+            <div class="grid gap-x-8 gap-y-2 text-sm md:grid-cols-2">
+              <label class="flex items-center gap-2">
+                <input v-model="documentState.options.structure" type="checkbox" class="checkbox checkbox-sm" />
+                Einrückungen und Spalten-Text erhalten
+              </label>
+              <label class="flex items-center gap-2">
+                <input v-model="documentState.options.tables" type="checkbox" class="checkbox checkbox-sm" />
+                Tabellen erkennen (ab 3 Spalten)
+              </label>
+              <label class="flex items-center gap-2">
+                <input v-model="documentState.options.keepLineNumbers" type="checkbox" class="checkbox checkbox-sm" />
+                Zeilennummern am Rand behalten
+              </label>
+              <label class="flex items-center gap-2" :class="{ 'opacity-60': !installed.ocr }">
+                <input v-model="documentState.options.markUncertain" type="checkbox" class="checkbox checkbox-sm" />
+                Unsichere Zeilen mit [?] markieren
+                <span class="text-xs opacity-70">(nur bei Texterkennung)</span>
+              </label>
             </div>
           </div>
         </div>
 
-        <div class="grid gap-x-8 gap-y-2 text-sm md:grid-cols-2">
-          <div class="flex items-center gap-2">
-            <span class="badge badge-sm" :class="installed.ocr ? 'badge-success' : 'badge-warning'">
-              {{ installed.ocr ? 'installiert' : 'nicht installiert' }}
-            </span>
-            Texterkennung für gescannte Seiten
-            <button v-if="!installed.ocr" class="link text-xs" @click="emit('navigate', 'modelle')">zu den Modellen</button>
+        <!-- 2. PDF wählen -->
+        <div class="space-y-3">
+          <h3 class="font-semibold">2 · PDF wählen</h3>
+          <div
+            class="flex flex-col items-center justify-center gap-3 rounded-box border-2 border-dashed p-10 text-center transition-colors"
+            :class="dragging ? 'border-primary bg-base-200' : 'border-base-300'"
+            @dragover.prevent="dragging = true"
+            @dragleave.prevent="dragging = false"
+            @drop.prevent="onDrop"
+          >
+            <template v-if="documentState.busy">
+              <p class="text-sm">{{ documentState.status }}</p>
+              <progress class="progress w-full max-w-md" :value="Math.round(documentState.progress * 100)" max="100" />
+              <button class="btn btn-sm" @click="cancel">Abbrechen</button>
+            </template>
+            <template v-else>
+              <ArrowUpTrayIcon class="size-8 opacity-50" />
+              <p class="text-sm">PDF hierher ziehen oder</p>
+              <div class="flex flex-wrap items-center justify-center gap-2">
+                <button class="btn btn-primary btn-sm" @click="fileInput.click()">PDF auswählen</button>
+                <!-- Beispiele zum Ausprobieren, bewusst unauffällig in einem Menü -->
+                <details ref="exampleMenu" class="dropdown dropdown-center">
+                  <summary class="btn btn-ghost btn-sm">Beispiel öffnen <ChevronDownIcon class="size-4" /></summary>
+                  <ul class="menu dropdown-content z-10 mt-1 w-80 rounded-box border border-base-300 bg-base-100 p-2 text-left shadow-lg">
+                    <li v-for="example in EXAMPLES" :key="example.file">
+                      <button class="flex flex-col items-start gap-0.5" @click="openExample(example)">
+                        <span class="font-medium">{{ example.title }}</span>
+                        <span class="text-xs opacity-70">{{ example.description }}</span>
+                        <span v-if="example.needsOcr && !installed.ocr" class="text-xs text-warning">
+                          Ohne installierte Texterkennung nur mit der fehlerhaften Textebene des Scanners
+                        </span>
+                      </button>
+                    </li>
+                    <li class="menu-title pt-2 text-xs font-normal">
+                      <span>Herunterladen:
+                        <template v-for="(example, i) in EXAMPLES" :key="`dl-${example.file}`">
+                          <template v-if="i > 0"> · </template>
+                          <a class="link" :href="exampleUrl(example)" :download="example.file">{{ example.file }}</a>
+                        </template>
+                      </span>
+                    </li>
+                  </ul>
+                </details>
+              </div>
+              <input ref="fileInput" type="file" accept="application/pdf,.pdf" class="hidden" @change="pick($event.target.files); $event.target.value = ''" />
+            </template>
           </div>
-          <label class="flex items-center gap-2" :class="{ 'opacity-50': !installed.layout }">
-            <input v-model="documentState.options.layout" type="checkbox" class="checkbox checkbox-sm" :disabled="!installed.layout" />
-            Layoutmodell verwenden (Spalten, Kopf-/Fusszeilen)
-            <button v-if="!installed.layout" class="link text-xs" @click="emit('navigate', 'modelle')">installieren</button>
-          </label>
-          <label class="flex items-center gap-2">
-            <input v-model="documentState.options.structure" type="checkbox" class="checkbox checkbox-sm" />
-            Einrückungen und Spalten-Text erhalten
-          </label>
-          <label class="flex items-center gap-2">
-            <input v-model="documentState.options.tables" type="checkbox" class="checkbox checkbox-sm" />
-            Tabellen als Markdown-Tabellen
-          </label>
-          <label class="flex items-center gap-2">
-            <input v-model="documentState.options.keepLineNumbers" type="checkbox" class="checkbox checkbox-sm" />
-            Zeilennummern am Rand behalten
-          </label>
-          <label class="flex items-center gap-2">
-            <input v-model="documentState.options.markUncertain" type="checkbox" class="checkbox checkbox-sm" />
-            Unsichere Zeilen im Text mit [?] markieren
-          </label>
+
+          <p v-if="documentState.error" class="text-sm text-error">{{ documentState.error }}</p>
         </div>
       </div>
     </section>

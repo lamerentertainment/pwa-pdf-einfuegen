@@ -23,8 +23,8 @@ Die App ist Open Source, damit jede und jeder nachprüfen kann, was sie tut.
 
 ## Zum Ausprobieren
 
-Unter *Erfassen* stehen zwei Beispieldokumente bereit (auch zum Herunterladen, in
-[`public/beispiele/`](public/beispiele/)):
+Unter *Erfassen* öffnet «Beispiel öffnen» neben «PDF auswählen» eines von zwei Beispieldokumenten
+(auch zum Herunterladen, in [`public/beispiele/`](public/beispiele/)):
 
 - **Gescannte Einvernahme** (9 Seiten) – ein Scan mit fehlerhafter Textebene des Scanners
   («lch», «lhnen»), zeigt die Texterkennung und die Prüfansicht. Dafür unter *Modelle* die

@@ -2,11 +2,13 @@
 import { computed, onActivated, onMounted, reactive, ref } from 'vue';
 import { connection } from '../net/connection.js';
 import ocrService from '../ocr/ocrService.js';
+import ModelInfo from '../components/ModelInfo.vue';
 import {
     download, formatBytes, getStatus, models, modelSize, remove, requestPersistence, storageInfo, verify,
 } from '../models/modelStore.js';
 
-const STATUS_LABEL = { installiert: 'Installiert', unvollstaendig: 'Unvollständig', fehlt: 'Nicht installiert' };
+const nameOf = id => models.find(m => m.id === id)?.name ?? id;
+const STATUS_LABEL = { installiert: '✓ Installiert', unvollstaendig: 'Unvollständig', fehlt: 'Nicht installiert' };
 
 // Pro Modell: Status, laufender Vorgang, Fortschritt und Meldung
 const rows = reactive(Object.fromEntries(models.map(model => [model.id, {
@@ -112,8 +114,18 @@ async function persist() {
           >{{ STATUS_LABEL[rows[model.id].status] ?? '…' }}</span>
         </div>
 
+        <ModelInfo :model="model" />
+        <p class="text-sm">
+          <span class="text-xs font-semibold uppercase tracking-wide opacity-60">Einstellung</span><br />
+          <template v-if="model.option">
+            In «Erfassen» unter «Modelle und Einstellungen»: <strong>«Layoutmodell verwenden»</strong>.
+            <template v-if="model.requires"> Setzt die installierte {{ nameOf(model.requires) }} voraus.</template>
+          </template>
+          <template v-else>Keine – wird automatisch verwendet, sobald es installiert ist.</template>
+        </p>
+
         <div class="flex flex-wrap gap-x-5 gap-y-1 text-xs opacity-70">
-          <span>Stufe {{ model.stage }}</span>
+          <span>Stufe {{ model.stage }} · Erfassen</span>
           <span>{{ formatBytes(modelSize(model)) }}</span>
           <span>Lizenz {{ model.license }}</span>
           <a class="link" :href="model.source" target="_blank" rel="noopener noreferrer">Quelle: {{ model.publisher }}</a>

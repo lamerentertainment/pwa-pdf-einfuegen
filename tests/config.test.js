@@ -65,3 +65,14 @@ describe('Beispieldokumente', () => {
         }
     });
 });
+
+describe('Modellbeschreibungen', () => {
+    it('sagen für jedes Modell, was es kann, was ohne es passiert und wann es wirkt', () => {
+        for (const model of catalog.models) {
+            expect(model.capabilities?.length, model.id).toBeGreaterThan(0);
+            expect(model.without, model.id).toBeTruthy();
+            expect(model.usage, model.id).toBeTruthy();
+            if (model.requires) expect(catalog.models.some(m => m.id === model.requires), model.id).toBe(true);
+        }
+    });
+});

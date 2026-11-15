@@ -28,7 +28,8 @@ const textarea = ref(null);
 const splitBox = ref(null);
 const layout = useResizable('pruefansicht', { ratio: 0.5 });
 
-// Darstellung rechts: bearbeitbarer Text oder gerendertes Markdown (Tabellen, Listen, Überschriften)
+// Darstellung rechts: bearbeitbarer Text oder Tabellenansicht (gerendertes Markdown: Tabellen mit
+// Linien, Listen, Überschriften)
 const view = usePreference('pruefansicht.ansicht', 'text');
 const wrapLines = usePreference('pruefansicht.umbruch', true);
 const rendered = computed(() => (view.value === 'markdown' ? renderMarkdown(page.value.text) : ''));
@@ -55,9 +56,25 @@ function cancelRelayout() {
     confirmRelayout.value = false;
 }
 
-function enableTables() {
+// Die Tabellenansicht schaltet die Tabellenerkennung selbst ein. Gibt es Bearbeitungen, die beim
+// Neuaufbau verloren gingen, fragt sie vorher nach (tablesPending).
+const tablesPending = ref(false);
+function ensureTables() {
+    tablesPending.value = false;
+    if (view.value !== 'markdown' || documentState.options.tables) return;
+    if (anyEdited.value) {
+        tablesPending.value = true;
+        return;
+    }
     draft.tables = true;
-    applyRelayout();
+    relayoutDocument({ tables: true });
+}
+watch(view, ensureTables, { immediate: true });
+
+function confirmTables() {
+    draft.tables = true;
+    relayoutDocument({ tables: true });
+    tablesPending.value = false;
 }
 
 // Nebeneinander erst ab 1024 px Breite
@@ -184,7 +201,7 @@ function reset() {
     <div class="flex flex-wrap items-start gap-x-5 gap-y-2 text-sm">
       <div class="join" role="radiogroup" aria-label="Darstellung des Texts">
         <button class="btn btn-xs join-item" :class="{ 'btn-primary': view === 'text' }" role="radio" :aria-checked="view === 'text'" @click="view = 'text'">Text</button>
-        <button class="btn btn-xs join-item" :class="{ 'btn-primary': view === 'markdown' }" role="radio" :aria-checked="view === 'markdown'" @click="view = 'markdown'">Markdown</button>
+        <button class="btn btn-xs join-item" :class="{ 'btn-primary': view === 'markdown' }" role="radio" :aria-checked="view === 'markdown'" @click="view = 'markdown'">Tabellenansicht</button>
       </div>
       <label v-if="view === 'text'" class="flex items-center gap-2">
         <input v-model="wrapLines" type="checkbox" class="checkbox checkbox-xs" /> Zeilen umbrechen
@@ -244,15 +261,16 @@ function reset() {
       </div>
       <div class="flex min-w-0 flex-1 flex-col gap-2" :class="{ 'h-[70vh]': !wide }">
         <template v-if="view === 'markdown'">
-          <div v-if="!documentState.options.tables" role="note" class="alert alert-info alert-soft py-2 text-xs">
-            <span>Tabellen erscheinen hier, wenn der Textaufbau sie als Markdown-Tabellen erkennt.</span>
-            <button class="btn btn-xs" @click="enableTables">{{ confirmRelayout ? 'Trotzdem (Bearbeitungen gehen verloren)' : 'Tabellen erkennen' }}</button>
+          <div v-if="tablesPending" role="alert" class="alert alert-warning alert-soft py-2 text-xs">
+            <span>Für die Tabellen wird der Text neu aufgebaut. Deine Bearbeitungen gehen dabei verloren.</span>
+            <button class="btn btn-xs" @click="confirmTables">Tabellen erkennen</button>
+            <button class="btn btn-xs btn-ghost" @click="view = 'text'">Abbrechen</button>
           </div>
           <!-- Bereinigt durch DOMPurify (src/capture/markdown.js) -->
           <div
             class="markdown h-full overflow-auto rounded-field border border-base-300 bg-base-100 p-4 text-sm"
             data-testid="markdown"
-            :aria-label="`Seite ${page.number} als Markdown`"
+            :aria-label="`Seite ${page.number} in der Tabellenansicht`"
             v-html="rendered"
           />
           <p v-if="documentState.options.tables && !pageHasTable" class="text-xs opacity-60">Auf dieser Seite wurde keine Tabelle erkannt.</p>
