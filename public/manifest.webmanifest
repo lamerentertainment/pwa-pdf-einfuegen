@@ -1,0 +1,14 @@
+{
+  "name": "PDF einfügen",
+  "short_name": "PDF einfügen",
+  "description": "PDF erfassen und Text weiterverarbeiten – vollständig lokal im Browser.",
+  "lang": "de",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#334155",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

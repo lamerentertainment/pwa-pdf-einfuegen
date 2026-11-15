@@ -1,0 +1,32 @@
+{
+  "name": "pwa-pdf-einfuegen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PDF erfassen und Text weiterverarbeiten – vollständig lokal im Browser.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lamerentertainment/pwa-pdf-einfuegen"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@heroicons/vue": "^2.2.0",
+    "vue": "^3.5.41"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "daisyui": "^5.7.16",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
+  }
+}

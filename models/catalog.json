@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "id": "ppocr-v5-latin",
+      "name": "Texterkennung PP-OCRv5 (lateinische Schrift)",
+      "purpose": "Erkennt Text auf gescannten Seiten. Deckt Deutsch inkl. Umlaute und ß ab.",
+      "stage": 1,
+      "license": "Apache-2.0",
+      "publisher": "PaddlePaddle",
+      "source": "https://huggingface.co/PaddlePaddle/latin_PP-OCRv5_mobile_rec_onnx",
+      "files": [
+        {
+          "name": "det.onnx",
+          "role": "Texterkennung: Zeilen finden",
+          "url": "https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_det_onnx/resolve/e6f4fa85f00e168c862bc462aebca69eef9b3d3d/inference.onnx",
+          "sha256": "a431985659dc921974177a95adcfbb90fd9e51989a5e04d70d0b75f597b6e61d",
+          "size": 4826518
+        },
+        {
+          "name": "rec.onnx",
+          "role": "Texterkennung: Zeichen lesen",
+          "url": "https://huggingface.co/PaddlePaddle/latin_PP-OCRv5_mobile_rec_onnx/resolve/89d3a50e2c27e2e7cceeab0e944c25c807d5db4f/inference.onnx",
+          "sha256": "7888113072263cb471b93f66dd5e2ad70548dc526fa1ace760d0d973dd121498",
+          "size": 8042023
+        },
+        {
+          "name": "rec.yml",
+          "role": "Zeichensatz",
+          "url": "https://huggingface.co/PaddlePaddle/latin_PP-OCRv5_mobile_rec_onnx/resolve/89d3a50e2c27e2e7cceeab0e944c25c807d5db4f/inference.yml",
+          "sha256": "0bbe984570f597af3638e50bdf2e8276f3ab26a61966096538b3b0d1849f5c84",
+          "size": 6817
+        }
+      ]
+    },
+    {
+      "id": "pp-doclayout-plus-l",
+      "name": "Layouterkennung PP-DocLayout_plus-L",
+      "purpose": "Erkennt Spalten, Überschriften, Tabellen, Kopf- und Fusszeilen und bringt den Text in die richtige Lesereihenfolge. Optional.",
+      "stage": 1,
+      "license": "Apache-2.0",
+      "publisher": "PaddlePaddle",
+      "source": "https://huggingface.co/PaddlePaddle/PP-DocLayout_plus-L_onnx",
+      "files": [
+        {
+          "name": "layout.onnx",
+          "role": "Layoutmodell",
+          "url": "https://huggingface.co/PaddlePaddle/PP-DocLayout_plus-L_onnx/resolve/feb74619326f634e0e883218598096a3733ad9f7/inference.onnx",
+          "sha256": "77afb2caa74dd13240d087d2eced91d7fcd2caebd16006a0a66162fc8707ff0e",
+          "size": 129736329
+        }
+      ]
+    }
+  ]
+}

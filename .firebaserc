@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "pwa-pdf-einfuegen"
+  },
+  "targets": {
+    "pwa-pdf-einfuegen": {
+      "hosting": {
+        "app": ["pwa-pdf-einfuegen"]
+      }
+    }
+  }
+}

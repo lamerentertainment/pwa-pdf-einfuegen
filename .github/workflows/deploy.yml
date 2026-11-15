@@ -1,0 +1,51 @@
+# Baut und veröffentlicht die App ausschliesslich aus diesem öffentlichen Repository.
+# Die Live-Version zeigt den Commit in der Fusszeile, so lässt sie sich mit dem Quellcode vergleichen.
+#
+# Einrichtung (einmalig):
+#   1. Firebase-Projekt anlegen und Projekt-ID in .firebaserc eintragen
+#   2. Service-Account-Schlüssel als Secret FIREBASE_SERVICE_ACCOUNT hinterlegen
+#      (firebase init hosting:github erledigt beides)
+name: Test und Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          target: app
