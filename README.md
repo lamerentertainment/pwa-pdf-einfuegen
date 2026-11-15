@@ -14,7 +14,11 @@ Die App ist Open Source, damit jede und jeder nachprüfen kann, was sie tut.
    korrigieren, kopieren oder als .txt speichern. Das Dokument lebt nur im Arbeitsspeicher.
 2. **Verarbeiten** – regelbasiert, ohne Modell: Zeilen zusammenfügen, Worttrennungen und typische
    OCR-Fehler korrigieren, Umwandlung in indirekte Rede («Ich bin unschuldig» → «Er sei unschuldig»).
-   Nach dem Vorbild der Word-Makros «PDF einfügen». *(in Arbeit)*
+   Regeln und Wortlisten stammen aus «PDF einfügen» ([`src/process/rules.js`](src/process/rules.js),
+   [`src/process/wordlists.json`](src/process/wordlists.json)). Die Tests prüfen das Ergebnis Zeichen für
+   Zeichen gegen die ursprüngliche Python-Umsetzung; zwei Fehler des Originals sind dabei behoben
+   (siehe [`scripts/pdf-einfuegen/generate_golden.py`](scripts/pdf-einfuegen/generate_golden.py)).
+   Änderungen werden im Ergebnis hervorgehoben.
 3. **Transformieren** – mit einem kleinen, lokal geladenen Sprachmodell. *(geplant)*
 
 ## Wann die App ins Internet geht

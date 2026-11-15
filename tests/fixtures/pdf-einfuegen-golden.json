@@ -1,0 +1,599 @@
+{
+  "quelle": "pdf-einfuegen courtapi/converters.py mit 2 Korrekturen (siehe generate_golden.py)",
+  "faelle": [
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich habe das Fahr-\nzeug am Montag ab-\ngeholt.",
+      "erwartet": "Ich habe das Fahrzeug am Montag abgeholt. ",
+      "original": "Ich habe das Fahrzeug am Montag abgeholt. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich habe das Fahr-\nzeug am Montag ab-\ngeholt.",
+      "erwartet": "Er habe das Fahrzeug am Montag abgeholt. ",
+      "original": "Er habe das Fahrzeug am Montag abgeholt. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich habe das Fahr-\nzeug am Montag ab-\ngeholt.",
+      "erwartet": "Sie habe das Fahrzeug am Montag abgeholt. ",
+      "original": "Sie habe das Fahrzeug am Montag abgeholt. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Die Parteien schlossen einen Ver-\ngleich über CHF 5'000.00 und\nverzichteten auf weitere Ansprüche.",
+      "erwartet": "Die Parteien schlossen einen Vergleich über Fr. 5'000.-- und verzichteten auf weitere Ansprüche. ",
+      "original": "Die Parteien schlossen einen Vergleich über Fr. 5'000.-- und verzichteten auf weitere Ansprüche. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Die Parteien schlossen einen Ver-\ngleich über CHF 5'000.00 und\nverzichteten auf weitere Ansprüche.",
+      "erwartet": "Die Parteien hätten einen Vergleich über Fr. 5'000.-- geschlossen und hätten auf weitere Ansprüche verzichtet. ",
+      "original": "Die Parteien hätten einen Vergleich über Fr. 5'000.-- geschlossen und hätten auf weitere Ansprüche verzichtet. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Die Parteien schlossen einen Ver-\ngleich über CHF 5'000.00 und\nverzichteten auf weitere Ansprüche.",
+      "erwartet": "Die Parteien hätten einen Vergleich über Fr. 5'000.-- geschlossen und hätten auf weitere Ansprüche verzichtet. ",
+      "original": "Die Parteien hätten einen Vergleich über Fr. 5'000.-- geschlossen und hätten auf weitere Ansprüche verzichtet. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Er sagte: «Ich komme morgen.»\nDanach ging er nach Hause.",
+      "erwartet": "Er sagte: \"Ich komme morgen.\" Danach ging er nach Hause. ",
+      "original": "Er sagte: \"Ich komme morgen.\" Danach ging er nach Hause. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Er sagte: «Ich komme morgen.»\nDanach ging er nach Hause.",
+      "erwartet": "Dieser habe gesagt: \"Er komme morgen.\" Danach sei dieser nach Hause gegangen. ",
+      "original": "Dieser habe gesagt: \"Er komme morgen.\" Danach sei dieser nach Hause gegangen. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Er sagte: «Ich komme morgen.»\nDanach ging er nach Hause.",
+      "erwartet": "Dieser habe gesagt: \"Sie komme morgen.\" Danach sei dieser nach Hause gegangen. ",
+      "original": "Dieser habe gesagt: \"Sie komme morgen.\" Danach sei dieser nach Hause gegangen. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Wir müssen handeln und die Regeln beachten.\nDie Milch war sauer.",
+      "erwartet": "Wir müssen handeln und die Regeln beachten. Die Milch war sauer. ",
+      "original": "Wir müssen handeIn und die RegeIn beachten. Die MiIch war sauer. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Wir müssen handeln und die Regeln beachten.\nDie Milch war sauer.",
+      "erwartet": "Sie müssten handeln und die Regeln beachten. Die Milch sei sauer gewesen. ",
+      "original": "Sie müssten handeIn und die RegeIn beachten. Die MiEr sei sauer gewesen. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Wir müssen handeln und die Regeln beachten.\nDie Milch war sauer.",
+      "erwartet": "Sie müssten handeln und die Regeln beachten. Die Milch sei sauer gewesen. ",
+      "original": "Sie müssten handeIn und die RegeIn beachten. Die MiSie sei sauer gewesen. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "lch war an diesem Abend nicht dort.\nlhr Auto stand vor dem Haus.",
+      "erwartet": "Ich war an diesem Abend nicht dort. Ihr Auto stand vor dem Haus. ",
+      "original": "Ich war an diesem Abend nicht dort. Ihr Auto stand vor dem Haus. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "lch war an diesem Abend nicht dort.\nlhr Auto stand vor dem Haus.",
+      "erwartet": "Er sei an diesem Abend nicht dort gewesen. Dieser Auto habe vor dem Haus gestanden. ",
+      "original": "Er sei an diesem Abend nicht dort gewesen. Dieser Auto habe vor dem Haus gestanden. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "lch war an diesem Abend nicht dort.\nlhr Auto stand vor dem Haus.",
+      "erwartet": "Sie sei an diesem Abend nicht dort gewesen. Dieser Auto habe vor dem Haus gestanden. ",
+      "original": "Sie sei an diesem Abend nicht dort gewesen. Dieser Auto habe vor dem Haus gestanden. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Die Jung- geselle-Party fand im Hotel statt,  und  zwar  spät.",
+      "erwartet": "Die Junggeselle-Party fand im Hotel statt, und zwar spät. ",
+      "original": "Die Junggeselle-Party fand im Hotel statt, und zwar spät. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Die Jung- geselle-Party fand im Hotel statt,  und  zwar  spät.",
+      "erwartet": "Die Junggeselle-Party habe im Hotel stattgefunden, und zwar spät. ",
+      "original": "Die Junggeselle-Party habe im Hotel stattgefunden, und zwar spät. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Die Jung- geselle-Party fand im Hotel statt,  und  zwar  spät.",
+      "erwartet": "Die Junggeselle-Party habe im Hotel stattgefunden, und zwar spät. ",
+      "original": "Die Junggeselle-Party habe im Hotel stattgefunden, und zwar spät. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Er hat ,,nein\" gesagt und 50 o/o bezahlt.",
+      "erwartet": "Er hat \"nein\" gesagt und 50 % bezahlt. ",
+      "original": "Er hat \"nein\" gesagt und 50 % bezahlt. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Er hat ,,nein\" gesagt und 50 o/o bezahlt.",
+      "erwartet": "Dieser habe \"nein\" gesagt und 50 % bezahlt. ",
+      "original": "Dieser habe \"nein\" gesagt und 50 % bezahlt. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Er hat ,,nein\" gesagt und 50 o/o bezahlt.",
+      "erwartet": "Dieser habe \"nein\" gesagt und 50 % bezahlt. ",
+      "original": "Dieser habe \"nein\" gesagt und 50 % bezahlt. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Zeile mit Leerzeichen am Ende   \nnächste Zeile\n\nneuer Absatz",
+      "erwartet": "Zeile mit Leerzeichen am Ende nächste Zeile neuer Absatz ",
+      "original": "Zeile mit Leerzeichen am Ende nächste Zeile neuer Absatz "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Zeile mit Leerzeichen am Ende   \nnächste Zeile\n\nneuer Absatz",
+      "erwartet": "Zeile mit Leerzeichen am Ende nächste Zeile neuer Absatz ",
+      "original": "Zeile mit Leerzeichen am Ende nächste Zeile neuer Absatz "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Zeile mit Leerzeichen am Ende   \nnächste Zeile\n\nneuer Absatz",
+      "erwartet": "Zeile mit Leerzeichen am Ende nächste Zeile neuer Absatz ",
+      "original": "Zeile mit Leerzeichen am Ende nächste Zeile neuer Absatz "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Der Vertrag über 1-2 Jahre wurde am 08.08.2001 unterzeichnet.",
+      "erwartet": "Der Vertrag über 1-2 Jahre wurde am 08.08.2001 unterzeichnet. ",
+      "original": "Der Vertrag über 1-2 Jahre wurde am 08.08.2001 unterzeichnet. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Der Vertrag über 1-2 Jahre wurde am 08.08.2001 unterzeichnet.",
+      "erwartet": "Der Vertrag über 1-2 Jahre sei am 08.08.2001 unterzeichnet worden. ",
+      "original": "Der Vertrag über 1-2 Jahre sei am 08.08.2001 unterzeichnet worden. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Der Vertrag über 1-2 Jahre wurde am 08.08.2001 unterzeichnet.",
+      "erwartet": "Der Vertrag über 1-2 Jahre sei am 08.08.2001 unterzeichnet worden. ",
+      "original": "Der Vertrag über 1-2 Jahre sei am 08.08.2001 unterzeichnet worden. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich bin unschuldig.",
+      "erwartet": "Ich bin unschuldig. ",
+      "original": "Ich bin unschuldig. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich bin unschuldig.",
+      "erwartet": "Er sei unschuldig. ",
+      "original": "Er sei unschuldig. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich bin unschuldig.",
+      "erwartet": "Sie sei unschuldig. ",
+      "original": "Sie sei unschuldig. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich habe nichts damit zu tun. Ich weiss nicht, wer das war.",
+      "erwartet": "Ich habe nichts damit zu tun. Ich weiss nicht, wer das war. ",
+      "original": "Ich habe nichts damit zu tun. Ich weiss nicht, wer das war. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich habe nichts damit zu tun. Ich weiss nicht, wer das war.",
+      "erwartet": "Er habe nichts damit zu tun. Er wisse nicht, wer das sei gewesen. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich habe nichts damit zu tun. Ich weiss nicht, wer das war.",
+      "erwartet": "Sie habe nichts damit zu tun. Sie wisse nicht, wer das sei gewesen. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Meine Frau ist an diesem Abend bei ihrer Mutter gewesen.",
+      "erwartet": "Meine Frau ist an diesem Abend bei ihrer Mutter gewesen. ",
+      "original": "Meine Frau ist an diesem Abend bei ihrer Mutter gewesen. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Meine Frau ist an diesem Abend bei ihrer Mutter gewesen.",
+      "erwartet": "Seine Frau sei an diesem Abend bei deren Mutter gewesen. ",
+      "original": "Seine Frau sei an diesem Abend bei deren Mutter gewesen. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Meine Frau ist an diesem Abend bei ihrer Mutter gewesen.",
+      "erwartet": "Ihre Frau sei an diesem Abend bei deren Mutter gewesen. ",
+      "original": "Ihre Frau sei an diesem Abend bei deren Mutter gewesen. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Wir wohnen seit zwei Jahren in Luzern. Unsere Kinder gehen hier zur Schule.",
+      "erwartet": "Wir wohnen seit zwei Jahren in Luzern. Unsere Kinder gehen hier zur Schule. ",
+      "original": "Wir wohnen seit zwei Jahren in Luzern. Unsere Kinder gehen hier zur Schule. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Wir wohnen seit zwei Jahren in Luzern. Unsere Kinder gehen hier zur Schule.",
+      "erwartet": "Sie wohnen seit zwei Jahren in Luzern. Ihre Kinder gehen hier zur Schule. ",
+      "original": "Sie wohnen seit zwei Jahren in Luzern. Ihre Kinder gehen hier zur Schule. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Wir wohnen seit zwei Jahren in Luzern. Unsere Kinder gehen hier zur Schule.",
+      "erwartet": "Sie wohnen seit zwei Jahren in Luzern. Ihre Kinder gehen hier zur Schule. ",
+      "original": "Sie wohnen seit zwei Jahren in Luzern. Ihre Kinder gehen hier zur Schule. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Er hat mich angerufen und mir gesagt, dass ich kommen soll.",
+      "erwartet": "Er hat mich angerufen und mir gesagt, dass ich kommen soll. ",
+      "original": "Er hat mich angerufen und mir gesagt, dass ich kommen soll. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Er hat mich angerufen und mir gesagt, dass ich kommen soll.",
+      "erwartet": "Dieser habe ihn/sich angerufen und ihm gesagt, dass er kommen solle. ",
+      "original": "Dieser habe ihn/sich angerufen und ihm gesagt, dass er kommen solle. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Er hat mich angerufen und mir gesagt, dass ich kommen soll.",
+      "erwartet": "Dieser habe sie/sich angerufen und ihr gesagt, dass sie kommen solle. ",
+      "original": "Dieser habe sie/sich angerufen und ihr gesagt, dass sie kommen solle. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich kann mich nicht daran erinnern.",
+      "erwartet": "Ich kann mich nicht daran erinnern. ",
+      "original": "Ich kann mich nicht daran erinnern. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich kann mich nicht daran erinnern.",
+      "erwartet": "Er könne ihn/sich nicht daran erinnern. ",
+      "original": "Er könne ihn/sich nicht daran erinnern. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich kann mich nicht daran erinnern.",
+      "erwartet": "Sie könne sie/sich nicht daran erinnern. ",
+      "original": "Sie könne sie/sich nicht daran erinnern. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich war zu Hause.",
+      "erwartet": "Ich war zu Hause. ",
+      "original": "Ich war zu Hause. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich war zu Hause.",
+      "erwartet": "Er sei zu Hause gewesen. ",
+      "original": "Er sei zu Hause gewesen. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich war zu Hause.",
+      "erwartet": "Sie sei zu Hause gewesen. ",
+      "original": "Sie sei zu Hause gewesen. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich ging.",
+      "erwartet": "Ich ging. ",
+      "original": "Ich ging. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich ging.",
+      "erwartet": "Er sei gegangen. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich ging.",
+      "erwartet": "Sie sei gegangen. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich trank Milch und ass.",
+      "erwartet": "Ich trank Milch und ass. ",
+      "original": "Ich trank MiIch und ass. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich trank Milch und ass.",
+      "erwartet": "Er habe Milch  getrunkenund habe gegessen. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich trank Milch und ass.",
+      "erwartet": "Sie habe Milch  getrunkenund habe gegessen. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich ging nach Hause und schlief sofort ein.",
+      "erwartet": "Ich ging nach Hause und schlief sofort ein. ",
+      "original": "Ich ging nach Hause und schlief sofort ein. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich ging nach Hause und schlief sofort ein.",
+      "erwartet": "Er sei nach Hause  gegangenund habe sofort ein geschlafen. ",
+      "original": "Er sei nach Hause  gegangenund habe sofort ein geschlafen. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich ging nach Hause und schlief sofort ein.",
+      "erwartet": "Sie sei nach Hause  gegangenund habe sofort ein geschlafen. ",
+      "original": "Sie sei nach Hause  gegangenund habe sofort ein geschlafen. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich bezahlte Fr. 200.-- für das Velo.",
+      "erwartet": "Ich bezahlte Fr. 200.-- für das Velo. ",
+      "original": "Ich bezahlte Fr. 200.-- für das Velo. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich bezahlte Fr. 200.-- für das Velo.",
+      "erwartet": "Er habe Fr. 200.-- für das Velo bezahlt. ",
+      "original": "Er habe Fr. 200.-- für das Velo bezahlt. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich bezahlte Fr. 200.-- für das Velo.",
+      "erwartet": "Sie habe Fr. 200.-- für das Velo bezahlt. ",
+      "original": "Sie habe Fr. 200.-- für das Velo bezahlt. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich kaufte das Auto ca. 2019 und verkaufte es wieder.",
+      "erwartet": "Ich kaufte das Auto ca. 2019 und verkaufte es wieder. ",
+      "original": "Ich kaufte das Auto ca. 2019 und verkaufte es wieder. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich kaufte das Auto ca. 2019 und verkaufte es wieder.",
+      "erwartet": "Er habe das Auto ca. 2019 gekauft und habe es wieder verkauft. ",
+      "original": "Er habe das Auto ca. 2019 gekauft und habe es wieder verkauft. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich kaufte das Auto ca. 2019 und verkaufte es wieder.",
+      "erwartet": "Sie habe das Auto ca. 2019 gekauft und habe es wieder verkauft. ",
+      "original": "Sie habe das Auto ca. 2019 gekauft und habe es wieder verkauft. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Am 08.08.2001 fuhr ich nach Zürich.",
+      "erwartet": "Am 08.08.2001 fuhr ich nach Zürich. ",
+      "original": "Am 08.08.2001 fuhr ich nach Zürich. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Am 08.08.2001 fuhr ich nach Zürich.",
+      "erwartet": "Am 08.08.2001 sei er nach Zürich gefahren. ",
+      "original": "Am 08.08.2001 sei er nach Zürich gefahren. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Am 08.08.2001 fuhr ich nach Zürich.",
+      "erwartet": "Am 08.08.2001 sei sie nach Zürich gefahren. ",
+      "original": "Am 08.08.2001 sei sie nach Zürich gefahren. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich bekam Kost und Logis und arbeitete dafür.",
+      "erwartet": "Ich bekam Kost und Logis und arbeitete dafür. ",
+      "original": "Ich bekam Kost und Logis und arbeitete dafür. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich bekam Kost und Logis und arbeitete dafür.",
+      "erwartet": "Er habe Kost und Logis  bekommenund habe dafür gearbeitet. ",
+      "original": "Er habe Kost und Logis  bekommenund habe dafür gearbeitet. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich bekam Kost und Logis und arbeitete dafür.",
+      "erwartet": "Sie habe Kost und Logis  bekommenund habe dafür gearbeitet. ",
+      "original": "Sie habe Kost und Logis  bekommenund habe dafür gearbeitet. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich kam nach und nach dahinter, was passiert war.",
+      "erwartet": "Ich kam nach und nach dahinter, was passiert war. ",
+      "original": "Ich kam nach und nach dahinter, was passiert war. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich kam nach und nach dahinter, was passiert war.",
+      "erwartet": "Er sei nach und nach dahinter gekommen, was passiert sei gewesen. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich kam nach und nach dahinter, was passiert war.",
+      "erwartet": "Sie sei nach und nach dahinter gekommen, was passiert sei gewesen. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich wusste nicht, dass er eine Waffe hatte.",
+      "erwartet": "Ich wusste nicht, dass er eine Waffe hatte. ",
+      "original": "Ich wusste nicht, dass er eine Waffe hatte. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich wusste nicht, dass er eine Waffe hatte.",
+      "erwartet": "Er habe nicht gewusst, dass dieser eine Waffe habe gehabt. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich wusste nicht, dass er eine Waffe hatte.",
+      "erwartet": "Sie habe nicht gewusst, dass dieser eine Waffe habe gehabt. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Wir trafen uns im Restaurant Löwen, wo wir etwas tranken.",
+      "erwartet": "Wir trafen uns im Restaurant Löwen, wo wir etwas tranken. ",
+      "original": "Wir trafen uns im Restaurant Löwen, wo wir etwas tranken. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Wir trafen uns im Restaurant Löwen, wo wir etwas tranken.",
+      "erwartet": "Sie hätten sich/ihnen im Restaurant Löwen getroffen, wo sie etwas hätten getrunken. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Wir trafen uns im Restaurant Löwen, wo wir etwas tranken.",
+      "erwartet": "Sie hätten sich/ihnen im Restaurant Löwen getroffen, wo sie etwas hätten getrunken. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich sah ihn, als er das Haus verliess.",
+      "erwartet": "Ich sah ihn, als er das Haus verliess. ",
+      "original": "Ich sah ihn, als er das Haus verliess. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich sah ihn, als er das Haus verliess.",
+      "erwartet": "Er habe diesen gesehen, als dieser das Haus habe verlassen. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich sah ihn, als er das Haus verliess.",
+      "erwartet": "Sie habe diesen gesehen, als dieser das Haus habe verlassen. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich fragte ihn: Warum bist du hier? Er antwortete nicht.",
+      "erwartet": "Ich fragte ihn: Warum bist du hier? Er antwortete nicht. ",
+      "original": "Ich fragte ihn: Warum bist du hier? Er antwortete nicht. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich fragte ihn: Warum bist du hier? Er antwortete nicht.",
+      "erwartet": "Er habe ihn gefragt: Warum bist du hier? Dieser habe nicht geantwortet. ",
+      "original": "Er habe ihn gefragt: Warum bist du hier? Dieser habe nicht geantwortet. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich fragte ihn: Warum bist du hier? Er antwortete nicht.",
+      "erwartet": "Sie habe ihn gefragt: Warum bist du hier? Dieser habe nicht geantwortet. ",
+      "original": "Sie habe ihn gefragt: Warum bist du hier? Dieser habe nicht geantwortet. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich rief laut! Niemand kam; ich war allein.",
+      "erwartet": "Ich rief laut! Niemand kam; ich war allein. ",
+      "original": "Ich rief laut! Niemand kam; ich war allein. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich rief laut! Niemand kam; ich war allein.",
+      "erwartet": "Er habe laut gerufen! Niemand sei; er sei allein gewesen gekommen. ",
+      "original": "Er habe laut gerufen! Niemand sei; er sei allein gewesen gekommen. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich rief laut! Niemand kam; ich war allein.",
+      "erwartet": "Sie habe laut gerufen! Niemand sei; sie sei allein gewesen gekommen. ",
+      "original": "Sie habe laut gerufen! Niemand sei; sie sei allein gewesen gekommen. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich habe meinen Mann gestern zum letzten Mal gesehen.",
+      "erwartet": "Ich habe meinen Mann gestern zum letzten Mal gesehen. ",
+      "original": "Ich habe meinen Mann gestern zum letzten Mal gesehen. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich habe meinen Mann gestern zum letzten Mal gesehen.",
+      "erwartet": "Er habe seinen Mann gestern zum letzten Mal gesehen. ",
+      "original": "Er habe seinen Mann gestern zum letzten Mal gesehen. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich habe meinen Mann gestern zum letzten Mal gesehen.",
+      "erwartet": "Sie habe ihren Mann gestern zum letzten Mal gesehen. ",
+      "original": "Sie habe ihren Mann gestern zum letzten Mal gesehen. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich war mit meiner Schwester im Kino und wir assen danach Pizza.",
+      "erwartet": "Ich war mit meiner Schwester im Kino und wir assen danach Pizza. ",
+      "original": "Ich war mit meiner Schwester im Kino und wir assen danach Pizza. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich war mit meiner Schwester im Kino und wir assen danach Pizza.",
+      "erwartet": "Er sei mit seiner Schwester im Kino  gewesenund sie hätten danach Pizza gegessen. ",
+      "original": "Er sei mit seiner Schwester im Kino  gewesenund sie hätten danach Pizza gegessen. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich war mit meiner Schwester im Kino und wir assen danach Pizza.",
+      "erwartet": "Sie sei mit ihrer Schwester im Kino  gewesenund sie hätten danach Pizza gegessen. ",
+      "original": "Sie sei mit ihrer Schwester im Kino  gewesenund sie hätten danach Pizza gegessen. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Er hat mich zurück gehalten und dann an gerufen.",
+      "erwartet": "Er hat mich zurück gehalten und dann an gerufen. ",
+      "original": "Er hat mich zurück gehalten und dann an gerufen. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Er hat mich zurück gehalten und dann an gerufen.",
+      "erwartet": "Dieser habe ihn/sich zurückgehalten und dann angerufen. ",
+      "original": "Dieser habe ihn/sich zurückgehalten und dann angerufen. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Er hat mich zurück gehalten und dann an gerufen.",
+      "erwartet": "Dieser habe sie/sich zurückgehalten und dann angerufen. ",
+      "original": "Dieser habe sie/sich zurückgehalten und dann angerufen. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich habe die Tür ge-\nöffnet und bin hineingegangen. Dort sah ich\nmeinen Bruder, der am Boden lag.",
+      "erwartet": "Ich habe die Tür geöffnet und bin hineingegangen. Dort sah ich meinen Bruder, der am Boden lag. ",
+      "original": "Ich habe die Tür geöffnet und bin hineingegangen. Dort sah ich meinen Bruder, der am Boden lag. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich habe die Tür ge-\nöffnet und bin hineingegangen. Dort sah ich\nmeinen Bruder, der am Boden lag.",
+      "erwartet": "Er habe die Tür geöffnet und sei hineingegangen. Dort habe er seinen Bruder gesehen, der am Boden sei gelegen. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich habe die Tür ge-\nöffnet und bin hineingegangen. Dort sah ich\nmeinen Bruder, der am Boden lag.",
+      "erwartet": "Sie habe die Tür geöffnet und sei hineingegangen. Dort habe sie ihren Bruder gesehen, der am Boden sei gelegen. ",
+      "original": "ABSTURZ: IndexError: string index out of range"
+    }
+  ]
+}
