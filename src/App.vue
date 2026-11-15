@@ -55,7 +55,7 @@ const commitUrl = `${BUILD.repository}/commit/${BUILD.commit}`;
     </div>
 
     <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
-      <KeepAlive><component :is="current" /></KeepAlive>
+      <KeepAlive><component :is="current" @navigate="active = $event" /></KeepAlive>
     </main>
 
     <footer class="border-t border-base-300 bg-base-100 text-xs opacity-80">

@@ -8,7 +8,10 @@ Die App ist Open Source, damit jede und jeder nachprüfen kann, was sie tut.
 ## Stufen
 
 1. **Erfassen** – eingebetteter PDF-Text oder lokale Texterkennung (PP-OCRv5) für gescannte
-   Seiten, optional mit Layouterkennung. Danach stehen PDF und Text zum Prüfen nebeneinander. *(in Arbeit)*
+   Seiten, optional mit Layoutmodell (Spalten, Kopf-/Fusszeilen). In der Prüfansicht stehen
+   PDF-Seite und erfasster Text nebeneinander: Ein Klick auf eine Zeile im PDF markiert sie im
+   Text und umgekehrt, unsicher erkannte Zeilen sind hervorgehoben, der Text lässt sich direkt
+   korrigieren, kopieren oder als .txt speichern. Das Dokument lebt nur im Arbeitsspeicher.
 2. **Verarbeiten** – regelbasiert, ohne Modell: Zeilen zusammenfügen, Worttrennungen und typische
    OCR-Fehler korrigieren, Umwandlung in indirekte Rede («Ich bin unschuldig» → «Er sei unschuldig»).
    Nach dem Vorbild der Word-Makros «PDF einfügen». *(in Arbeit)*

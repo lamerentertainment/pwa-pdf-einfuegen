@@ -8,3 +8,4 @@ dist/
 .vscode/
 # Testdokumente nie einchecken
 *.pdf
+public/vendor/

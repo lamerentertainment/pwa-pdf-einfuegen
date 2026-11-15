@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { execSync } from 'node:child_process';
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { CSP } from './csp.js';
 
@@ -69,6 +69,12 @@ function offlineApp() {
             return [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: CSP }, injectTo: 'head-prepend' }];
         },
         closeBundle() {
+            // onnxruntime-web references its .wasm via new URL(…, import.meta.url), so Vite emits a
+            // second 13 MB copy. The OCR worker always loads the versioned copy from /vendor
+            // (wasmPaths in src/ocr/ocr.worker.js); the unused one would only bloat the download.
+            for (const file of listFiles(outDir)) {
+                if (/^assets\/ort-wasm[\w-]*\.wasm$/.test(file)) rmSync(join(outDir, file));
+            }
             const precache = listFiles(outDir)
                 .filter(file => !NOT_PRECACHED.has(file) && !file.endsWith('.map'))
                 .sort()
@@ -101,6 +107,13 @@ export default defineConfig({
     preview: { headers: ISOLATION },
     build: {
         target: 'esnext',
+    },
+    // The OCR worker is an ES module (it imports the ONNX Runtime)
+    worker: {
+        format: 'es',
+    },
+    optimizeDeps: {
+        exclude: ['onnxruntime-web'],
     },
     test: {
         environment: 'node',

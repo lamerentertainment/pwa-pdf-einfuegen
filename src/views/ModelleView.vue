@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onActivated, onMounted, reactive, ref } from 'vue';
 import { connection } from '../net/connection.js';
+import ocrService from '../ocr/ocrService.js';
 import {
     download, formatBytes, getStatus, models, modelSize, remove, requestPersistence, storageInfo, verify,
 } from '../models/modelStore.js';
@@ -59,6 +60,8 @@ async function del(model) {
     const row = rows[model.id];
     row.busy = 'loeschen';
     try {
+        // Ein geladenes Modell auch aus dem Arbeitsspeicher entfernen
+        ocrService.dispose();
         await remove(model);
         report(row, 'Aus dem Browser entfernt.');
     } finally {
