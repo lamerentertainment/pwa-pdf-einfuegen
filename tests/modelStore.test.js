@@ -40,3 +40,14 @@ describe('Grössen', () => {
         expect(formatBytes(bytes)).toBe(text);
     });
 });
+
+describe('hashStream', () => {
+    it('berechnet SHA-256 Stück für Stück wie über den ganzen Inhalt', async () => {
+        const parts = ['a', 'b', 'c'].map(c => new TextEncoder().encode(c));
+        const stream = new ReadableStream({ start(c) { parts.forEach(p => c.enqueue(p)); c.close(); } });
+        const seen = [];
+        const { hashStream } = await import('../src/models/modelStore.js');
+        expect(await hashStream(stream, n => seen.push(n))).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+        expect(seen).toEqual([1, 2, 3]);
+    });
+});

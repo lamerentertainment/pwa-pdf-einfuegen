@@ -4,7 +4,7 @@
  * so they are served from the app's own origin (no CDN) and stored by the service worker
  * together with the app:
  *
- * - ONNX Runtime WebAssembly (OCR engine)
+ * - ONNX Runtime WebAssembly (OCR engine, and the WebGPU build used by the language models)
  * - pdf.js worker and its image decoders (JBIG2, JPEG 2000, colour profiles)
  *
  * Folder names carry the package version: a cached file can never be paired with the
@@ -32,6 +32,15 @@ await copy(join(modules, 'onnxruntime-web/dist'), join(vendor, `ort-${ort}`), [
     'ort-wasm-simd-threaded.mjs',
 ]);
 
+// ONNX Runtime der Sprachmodelle (Stufe 3): transformers.js bringt eine eigene, neuere Version mit
+// und nutzt für WebGPU die «asyncify»-Variante. Ohne eigene Kopie käme sie vom CDN jsDelivr.
+const llmOrtDir = join(modules, '@huggingface/transformers/node_modules/onnxruntime-web');
+const llmOrt = JSON.parse(await readFile(join(llmOrtDir, 'package.json'), 'utf8')).version;
+await copy(join(llmOrtDir, 'dist'), join(vendor, `ort-${llmOrt}`), [
+    'ort-wasm-simd-threaded.asyncify.mjs',
+    'ort-wasm-simd-threaded.asyncify.wasm',
+]);
+
 const pdfjs = await version('pdfjs-dist');
 await copy(join(modules, 'pdfjs-dist/build'), join(vendor, `pdfjs-${pdfjs}`), ['pdf.worker.min.mjs']);
 await copy(join(modules, 'pdfjs-dist/wasm'), join(vendor, `pdfjs-${pdfjs}/wasm`), [
@@ -40,4 +49,4 @@ await copy(join(modules, 'pdfjs-dist/wasm'), join(vendor, `pdfjs-${pdfjs}/wasm`)
     'qcms_bg.wasm',
 ]);
 
-console.log(`vendor: onnxruntime-web ${ort}, pdfjs-dist ${pdfjs} → public/vendor/`);
+console.log(`vendor: onnxruntime-web ${ort} (OCR) und ${llmOrt} (Sprachmodelle), pdfjs-dist ${pdfjs} → public/vendor/`);

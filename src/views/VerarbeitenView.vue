@@ -1,15 +1,17 @@
 <script setup>
-import { computed, nextTick, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, toRef, watch } from 'vue';
 import { ArrowDownTrayIcon, ClipboardDocumentIcon, DocumentArrowDownIcon } from '@heroicons/vue/24/outline';
 import { documentState } from '../capture/documentStore.js';
 import { joinPages } from '../capture/joinPages.js';
 import { MODES, processText, WORDLIST_SOURCE } from '../process/rules.js';
 import { diffParagraphs } from '../process/diff.js';
 import { mapPosition } from '../process/align.js';
+import { processState } from '../process/processStore.js';
 import { elementVisibleTop, scrollElementTo, scrollTextareaTo, textareaVisibleTop } from '../components/textPosition.js';
 
-const input = ref('');
-const output = ref('');
+// Gemeinsam mit Stufe 3 (processStore), damit diese das Ergebnis übernehmen kann
+const input = toRef(processState, 'input');
+const output = toRef(processState, 'output');
 const mode = ref('einfuegen');
 const keepParagraphs = ref(true);
 const highlight = ref(true);

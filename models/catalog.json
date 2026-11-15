@@ -66,6 +66,274 @@
           "size": 129736329
         }
       ]
+    },
+    {
+      "id": "gemma-3-1b",
+      "name": "Sprachmodell Gemma 3 1B (klein)",
+      "purpose": "Kleines Sprachmodell für einfache Umformungen. Optional.",
+      "capabilities": [
+        "Führt kurze Anweisungen aus, etwa Text umformen oder kurz zusammenfassen.",
+        "Läuft auch auf schwächeren Geräten, ist im Deutschen aber deutlich ungenauer als Gemma 4."
+      ],
+      "without": "Stufe 3 braucht mindestens ein Sprachmodell. Stufe 1 und 2 funktionieren ohne.",
+      "usage": "In «3 · Transformieren», wenn es dort als Modell gewählt ist. Braucht einen Browser mit WebGPU (aktuelles Chrome oder Edge, Safari ab 26) und genug Grafikspeicher. Etwa 1,5 GB Grafikspeicher.",
+      "option": null,
+      "stage": 3,
+      "license": "Gemma-Nutzungsbedingungen",
+      "publisher": "Google (ONNX: onnx-community)",
+      "source": "https://huggingface.co/onnx-community/gemma-3-1b-it-ONNX",
+      "files": [
+        {
+          "name": "config.json",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-3-1b-it-ONNX/resolve/a58439f40017d3b99c7d378ff525e54e0ba08ebf/config.json",
+          "sha256": "91e864295e06e3069a26e89dc5d7e506d32153b23a29bf283e8e3a46fc546806",
+          "size": 1975
+        },
+        {
+          "name": "generation_config.json",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-3-1b-it-ONNX/resolve/a58439f40017d3b99c7d378ff525e54e0ba08ebf/generation_config.json",
+          "sha256": "2ff57fef908e4da8accc2e369d2c848785e6f2f8c5d1ed102bd9cb9aa70f7aaa",
+          "size": 244
+        },
+        {
+          "name": "tokenizer.json",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-3-1b-it-ONNX/resolve/a58439f40017d3b99c7d378ff525e54e0ba08ebf/tokenizer.json",
+          "sha256": "55da1312bdf1d7d8fe8d9d1b3eed04086261149e6034e0ac3f8c633b67f5aac8",
+          "size": 20323013
+        },
+        {
+          "name": "tokenizer_config.json",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-3-1b-it-ONNX/resolve/a58439f40017d3b99c7d378ff525e54e0ba08ebf/tokenizer_config.json",
+          "sha256": "362055c2b4c69af56db94be4f1297bc6d2936a8f4ab9c0173b5bedd502280507",
+          "size": 2327
+        },
+        {
+          "name": "chat_template.jinja",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-3-1b-it-ONNX/resolve/a58439f40017d3b99c7d378ff525e54e0ba08ebf/chat_template.jinja",
+          "sha256": "7de1c58e208eda46e9c7f86397df37ec49883aeece39fb961e0a6b24088dd3c4",
+          "size": 1532
+        },
+        {
+          "name": "special_tokens_map.json",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-3-1b-it-ONNX/resolve/a58439f40017d3b99c7d378ff525e54e0ba08ebf/special_tokens_map.json",
+          "sha256": "2f7b0adf4fb469770bb1490e3e35df87b1dc578246c5e7e6fc76ecf33213a397",
+          "size": 662
+        },
+        {
+          "name": "onnx/model_q4f16.onnx",
+          "role": "Modellgewichte",
+          "url": "https://huggingface.co/onnx-community/gemma-3-1b-it-ONNX/resolve/a58439f40017d3b99c7d378ff525e54e0ba08ebf/onnx/model_q4f16.onnx",
+          "sha256": "522d1f0e1d1fd0065ca02d61a0bf17a43701c1835b4ebf0c4628b73f1a6fb796",
+          "size": 461341
+        },
+        {
+          "name": "onnx/model_q4f16.onnx_data",
+          "role": "Modellgewichte",
+          "url": "https://huggingface.co/onnx-community/gemma-3-1b-it-ONNX/resolve/a58439f40017d3b99c7d378ff525e54e0ba08ebf/onnx/model_q4f16.onnx_data",
+          "sha256": "6fb9bc8dd4b93a040bcea60c953c2e24f60f9d52e708befec077f6ab60baa007",
+          "size": 763067904
+        }
+      ],
+      "runtime": {
+        "library": "transformers.js",
+        "repo": "onnx-community/gemma-3-1b-it-ONNX",
+        "revision": "a58439f40017d3b99c7d378ff525e54e0ba08ebf",
+        "modelClass": "AutoModelForCausalLM",
+        "dtype": "q4f16",
+        "device": "webgpu"
+      }
+    },
+    {
+      "id": "gemma-4-e2b",
+      "name": "Sprachmodell Gemma 4 E2B (Edge)",
+      "purpose": "Googles Edge-Modell für Geräte: guter Kompromiss aus Qualität und Grösse. Optional.",
+      "capabilities": [
+        "Wandelt Aussagen und Fragen nach den Presets in die indirekte Rede um.",
+        "Fasst Dokumente, Aussagen, Anklagen und Sachbeweise zusammen.",
+        "Gutes Deutsch für seine Grösse; für lange juristische Würdigungen ist es zu klein."
+      ],
+      "without": "Stufe 3 braucht mindestens ein Sprachmodell. Stufe 1 und 2 funktionieren ohne.",
+      "usage": "In «3 · Transformieren», wenn es dort als Modell gewählt ist. Braucht einen Browser mit WebGPU (aktuelles Chrome oder Edge, Safari ab 26) und genug Grafikspeicher. Etwa 4 GB Grafikspeicher.",
+      "option": null,
+      "stage": 3,
+      "license": "Apache-2.0",
+      "publisher": "Google DeepMind (ONNX: onnx-community)",
+      "source": "https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX",
+      "files": [
+        {
+          "name": "config.json",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX/resolve/6f21c99d7e18237f8d2ce92aadfdbfeba877f63a/config.json",
+          "sha256": "5494e6677d9e150ea20ba3101ae8a32b0f141004626f052725d8bf48991b9faa",
+          "size": 5549
+        },
+        {
+          "name": "generation_config.json",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX/resolve/6f21c99d7e18237f8d2ce92aadfdbfeba877f63a/generation_config.json",
+          "sha256": "e6a0b50de21a511f15ac4857b7f227f68ee60ecb1f11255d07b75e0bdc60e155",
+          "size": 238
+        },
+        {
+          "name": "tokenizer.json",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX/resolve/6f21c99d7e18237f8d2ce92aadfdbfeba877f63a/tokenizer.json",
+          "sha256": "47bd35616c7c782aaca6ccf48c75f3461d5877170984b8836b375107d0a9f566",
+          "size": 19439251
+        },
+        {
+          "name": "tokenizer_config.json",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX/resolve/6f21c99d7e18237f8d2ce92aadfdbfeba877f63a/tokenizer_config.json",
+          "sha256": "175c298b7bedbe83b3f2d6eecdc1fc9058cb4ff6d9f115c5990bc82d96336b9e",
+          "size": 18590
+        },
+        {
+          "name": "chat_template.jinja",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX/resolve/6f21c99d7e18237f8d2ce92aadfdbfeba877f63a/chat_template.jinja",
+          "sha256": "781d10940fbc44be40064b5d43a056fc486c84ceaa55538226368b57314132bf",
+          "size": 16317
+        },
+        {
+          "name": "onnx/embed_tokens_q4f16.onnx",
+          "role": "Modellgewichte",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX/resolve/6f21c99d7e18237f8d2ce92aadfdbfeba877f63a/onnx/embed_tokens_q4f16.onnx",
+          "sha256": "d7ca53f6a169471b5699b2f57ee4c7aa2c73732b0152f3909e64b71384444825",
+          "size": 5621
+        },
+        {
+          "name": "onnx/embed_tokens_q4f16.onnx_data",
+          "role": "Modellgewichte",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX/resolve/6f21c99d7e18237f8d2ce92aadfdbfeba877f63a/onnx/embed_tokens_q4f16.onnx_data",
+          "sha256": "024b199e6358ed42970f807686add5f9430d7e254ca7ce22fc9c83f015b9c517",
+          "size": 1590689792
+        },
+        {
+          "name": "onnx/decoder_model_merged_q4f16.onnx",
+          "role": "Modellgewichte",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX/resolve/6f21c99d7e18237f8d2ce92aadfdbfeba877f63a/onnx/decoder_model_merged_q4f16.onnx",
+          "sha256": "73c0f1fe04f9a3a048fb3319c0671b6cf0346bf33a3a8624c853bcffe01c24a4",
+          "size": 673231
+        },
+        {
+          "name": "onnx/decoder_model_merged_q4f16.onnx_data",
+          "role": "Modellgewichte",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX/resolve/6f21c99d7e18237f8d2ce92aadfdbfeba877f63a/onnx/decoder_model_merged_q4f16.onnx_data",
+          "sha256": "3b27245a7396cb7039a4e4118bd2a8aa35106bae381522edf7c4867b5f22bb10",
+          "size": 1519700992
+        }
+      ],
+      "runtime": {
+        "library": "transformers.js",
+        "repo": "onnx-community/gemma-4-E2B-it-ONNX",
+        "revision": "6f21c99d7e18237f8d2ce92aadfdbfeba877f63a",
+        "modelClass": "Gemma4ForCausalLM",
+        "dtype": "q4f16",
+        "device": "webgpu"
+      }
+    },
+    {
+      "id": "gemma-4-e4b",
+      "name": "Sprachmodell Gemma 4 E4B (Edge, gross)",
+      "purpose": "Grössere Edge-Variante: genauer, braucht aber deutlich mehr Speicher. Optional.",
+      "capabilities": [
+        "Wie Gemma 4 E2B, mit spürbar besserem Textverständnis und weniger Fehlern bei längeren Texten.",
+        "Für leistungsfähige Rechner mit viel Grafikspeicher."
+      ],
+      "without": "Stufe 3 braucht mindestens ein Sprachmodell. Stufe 1 und 2 funktionieren ohne.",
+      "usage": "In «3 · Transformieren», wenn es dort als Modell gewählt ist. Braucht einen Browser mit WebGPU (aktuelles Chrome oder Edge, Safari ab 26) und genug Grafikspeicher. Etwa 6 GB Grafikspeicher.",
+      "option": null,
+      "stage": 3,
+      "license": "Apache-2.0",
+      "publisher": "Google DeepMind (ONNX: onnx-community)",
+      "source": "https://huggingface.co/onnx-community/gemma-4-E4B-it-ONNX",
+      "files": [
+        {
+          "name": "config.json",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E4B-it-ONNX/resolve/2b6d2e26a962f70a33da8f7cd81e1afdd8d9cfb2/config.json",
+          "sha256": "3251c77df50bccec2037f7e06a023105aeacbc89b784d990b1d279fc83ff9b1f",
+          "size": 5741
+        },
+        {
+          "name": "generation_config.json",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E4B-it-ONNX/resolve/2b6d2e26a962f70a33da8f7cd81e1afdd8d9cfb2/generation_config.json",
+          "sha256": "e6a0b50de21a511f15ac4857b7f227f68ee60ecb1f11255d07b75e0bdc60e155",
+          "size": 238
+        },
+        {
+          "name": "tokenizer.json",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E4B-it-ONNX/resolve/2b6d2e26a962f70a33da8f7cd81e1afdd8d9cfb2/tokenizer.json",
+          "sha256": "47bd35616c7c782aaca6ccf48c75f3461d5877170984b8836b375107d0a9f566",
+          "size": 19439251
+        },
+        {
+          "name": "tokenizer_config.json",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E4B-it-ONNX/resolve/2b6d2e26a962f70a33da8f7cd81e1afdd8d9cfb2/tokenizer_config.json",
+          "sha256": "175c298b7bedbe83b3f2d6eecdc1fc9058cb4ff6d9f115c5990bc82d96336b9e",
+          "size": 18590
+        },
+        {
+          "name": "chat_template.jinja",
+          "role": "Konfiguration/Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E4B-it-ONNX/resolve/2b6d2e26a962f70a33da8f7cd81e1afdd8d9cfb2/chat_template.jinja",
+          "sha256": "781d10940fbc44be40064b5d43a056fc486c84ceaa55538226368b57314132bf",
+          "size": 16317
+        },
+        {
+          "name": "onnx/embed_tokens_q4f16.onnx",
+          "role": "Modellgewichte",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E4B-it-ONNX/resolve/2b6d2e26a962f70a33da8f7cd81e1afdd8d9cfb2/onnx/embed_tokens_q4f16.onnx",
+          "sha256": "aa48aa1806eda0ea42b79cd8eea355aebaf3b6ae3b04190bfee7ceef308603a4",
+          "size": 5619
+        },
+        {
+          "name": "onnx/embed_tokens_q4f16.onnx_data",
+          "role": "Modellgewichte",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E4B-it-ONNX/resolve/2b6d2e26a962f70a33da8f7cd81e1afdd8d9cfb2/onnx/embed_tokens_q4f16.onnx_data",
+          "sha256": "fd0f39c08f7e20a31145c2351a76a408b6c4ab60d15cc33f40e29cf30c0b2451",
+          "size": 2017460224
+        },
+        {
+          "name": "onnx/decoder_model_merged_q4f16.onnx",
+          "role": "Modellgewichte",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E4B-it-ONNX/resolve/2b6d2e26a962f70a33da8f7cd81e1afdd8d9cfb2/onnx/decoder_model_merged_q4f16.onnx",
+          "sha256": "43aa27452be3dd7fbb9524257dd66af957add748ddab20ea63ae71923e59aa08",
+          "size": 850610
+        },
+        {
+          "name": "onnx/decoder_model_merged_q4f16.onnx_data",
+          "role": "Modellgewichte",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E4B-it-ONNX/resolve/2b6d2e26a962f70a33da8f7cd81e1afdd8d9cfb2/onnx/decoder_model_merged_q4f16.onnx_data",
+          "sha256": "b6aa13eab3ecdf4721293e93c806c279ca0516956187f7aec63ee90ec7216e73",
+          "size": 2074847232
+        },
+        {
+          "name": "onnx/decoder_model_merged_q4f16.onnx_data_1",
+          "role": "Modellgewichte",
+          "url": "https://huggingface.co/onnx-community/gemma-4-E4B-it-ONNX/resolve/2b6d2e26a962f70a33da8f7cd81e1afdd8d9cfb2/onnx/decoder_model_merged_q4f16.onnx_data_1",
+          "sha256": "84e1c5f09ba88a5351959e4f73f62bce46f92dc19a7d7c82376ef36771c26a30",
+          "size": 812318720
+        }
+      ],
+      "runtime": {
+        "library": "transformers.js",
+        "repo": "onnx-community/gemma-4-E4B-it-ONNX",
+        "revision": "2b6d2e26a962f70a33da8f7cd81e1afdd8d9cfb2",
+        "modelClass": "Gemma4ForCausalLM",
+        "dtype": "q4f16",
+        "device": "webgpu"
+      }
     }
   ]
 }

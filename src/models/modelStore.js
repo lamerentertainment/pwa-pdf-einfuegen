@@ -3,6 +3,8 @@
 // Was überhaupt geladen werden kann, steht in models/catalog.json (feste Revision, SHA-256).
 // Modelle werden nur auf Knopfdruck geladen, nur im Modus «verbunden», und erst gespeichert,
 // wenn ihre Prüfsumme stimmt. Der Torwächter liefert sie danach ohne Netz aus.
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
 import catalog from '../../models/catalog.json';
 import { isBlocked } from '../net/connection.js';
 
@@ -51,6 +53,24 @@ export async function readWithProgress(response, onBytes) {
     return result;
 }
 
+/**
+ * SHA-256 über einen Datenstrom, Stück für Stück: auch mehrere Gigabyte grosse Modelldateien
+ * müssen so nie ganz im Arbeitsspeicher liegen.
+ */
+export async function hashStream(stream, onBytes) {
+    const hasher = sha256.create();
+    const reader = stream.getReader();
+    let received = 0;
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        hasher.update(value);
+        received += value.byteLength;
+        onBytes?.(received);
+    }
+    return bytesToHex(hasher.digest());
+}
+
 /** @returns {Promise<'installiert'|'unvollstaendig'|'fehlt'>} */
 export async function getStatus(model) {
     const cache = await caches.open(MODEL_CACHE);
@@ -62,6 +82,13 @@ export async function getStatus(model) {
 
 export async function download(model, { onProgress, signal } = {}) {
     const total = modelSize(model);
+    const { usage, quota } = await storageInfo();
+    if (quota && total > quota - usage) {
+        throw new Error(`Zu wenig Speicher im Browser: ${formatBytes(total)} nötig, ${formatBytes(quota - usage)} frei.`);
+    }
+    // Grosse Modelle: den Browser bitten, sie nicht von sich aus zu löschen
+    if (total > 200e6) await requestPersistence();
+
     const cache = await caches.open(MODEL_CACHE);
     let done = 0;
     for (const file of model.files) {
@@ -74,18 +101,25 @@ export async function download(model, { onProgress, signal } = {}) {
         const response = await fetch(file.url, { signal, cache: 'no-store' });
         if (isBlocked(response)) throw new Error('Die App ist im Modus «lokal». Bitte zuerst verbinden.');
         if (!response.ok) throw new Error(`${file.name}: Server antwortet mit ${response.status}.`);
-        const bytes = await readWithProgress(response, n => onProgress?.(Math.min(1, (done + n) / total)));
-        const actual = await sha256Hex(bytes);
+        // Ein Strom geht direkt in den Speicher, der andere durch die Prüfsumme
+        const [toCache, toHash] = response.body.tee();
+        const stored = cache.put(file.url, new Response(toCache, {
+            headers: { 'Content-Type': 'application/octet-stream', 'Content-Length': String(file.size) },
+        }));
+        let actual;
+        try {
+            [actual] = await Promise.all([
+                hashStream(toHash, n => onProgress?.(Math.min(1, (done + n) / total))),
+                stored,
+            ]);
+        } catch (err) {
+            await cache.delete(file.url);
+            throw err;
+        }
         if (actual !== file.sha256) {
+            await cache.delete(file.url);
             throw new Error(`${file.name}: Die Prüfsumme stimmt nicht. Die Datei wurde verworfen.`);
         }
-        await cache.put(file.url, new Response(bytes, {
-            headers: {
-                'Content-Type': 'application/octet-stream',
-                'Content-Length': String(bytes.byteLength),
-                'X-Sha256': actual,
-            },
-        }));
         done += file.size;
         onProgress?.(done / total);
     }
@@ -97,7 +131,7 @@ export async function verify(model) {
     const broken = [];
     for (const file of model.files) {
         const response = await cache.match(file.url);
-        if (!response || (await sha256Hex(await response.arrayBuffer())) !== file.sha256) broken.push(file.name);
+        if (!response || (await hashStream(response.body)) !== file.sha256) broken.push(file.name);
     }
     return broken;
 }

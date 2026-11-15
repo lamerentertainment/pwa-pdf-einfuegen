@@ -3,11 +3,14 @@ import { computed, onActivated, onMounted, reactive, ref } from 'vue';
 import { connection } from '../net/connection.js';
 import ocrService from '../ocr/ocrService.js';
 import ModelInfo from '../components/ModelInfo.vue';
+import { checkWebGPU } from '../llm/llmService.js';
 import {
     download, formatBytes, getStatus, models, modelSize, remove, requestPersistence, storageInfo, verify,
 } from '../models/modelStore.js';
 
 const nameOf = id => models.find(m => m.id === id)?.name ?? id;
+const STAGE_TITLE = { 1: 'Stufe 1 · Erfassen', 3: 'Stufe 3 · Sprachmodelle' };
+const gpu = ref(null);
 const STATUS_LABEL = { installiert: '✓ Installiert', unvollstaendig: 'Unvollständig', fehlt: 'Nicht installiert' };
 
 // Pro Modell: Status, laufender Vorgang, Fortschritt und Meldung
@@ -21,7 +24,10 @@ async function refresh() {
     for (const model of models) rows[model.id].status = await getStatus(model);
     storage.value = await storageInfo();
 }
-onMounted(refresh);
+onMounted(async () => {
+    refresh();
+    gpu.value = await checkWebGPU();
+});
 onActivated(refresh);
 
 function report(row, message, error = false) {
@@ -97,7 +103,17 @@ async function persist() {
       </div>
     </section>
 
-    <section v-for="model in models" :key="model.id" class="card bg-base-100 shadow-sm">
+    <template v-for="(model, i) in models" :key="model.id">
+    <div v-if="i === 0 || models[i - 1].stage !== model.stage" class="px-1 pt-2">
+      <h2 class="text-lg font-semibold">{{ STAGE_TITLE[model.stage] }}</h2>
+      <p v-if="model.stage === 3" class="text-sm opacity-80">
+        Für «3 · Transformieren». Installiere eines, je nach Gerät: kleinere Modelle laufen auf mehr Geräten, grössere schreiben besser.
+        <span v-if="gpu" :class="gpu.ok ? 'text-success' : 'text-warning'">
+          {{ gpu.ok ? `Dieses Gerät unterstützt WebGPU${gpu.name ? ` (${gpu.name})` : ''}.` : gpu.reason }}
+        </span>
+      </p>
+    </div>
+    <section class="card bg-base-100 shadow-sm" :data-model="model.id">
       <div class="card-body gap-3">
         <div class="flex flex-wrap items-start justify-between gap-2">
           <div>
@@ -117,7 +133,8 @@ async function persist() {
         <ModelInfo :model="model" />
         <p class="text-sm">
           <span class="text-xs font-semibold uppercase tracking-wide opacity-60">Einstellung</span><br />
-          <template v-if="model.option">
+          <template v-if="model.stage === 3">In «3 · Transformieren» unter «Sprachmodell» wählbar, sobald es installiert ist.</template>
+          <template v-else-if="model.option">
             In «Erfassen» unter «Modelle und Einstellungen»: <strong>«Layoutmodell verwenden»</strong>.
             <template v-if="model.requires"> Setzt die installierte {{ nameOf(model.requires) }} voraus.</template>
           </template>
@@ -125,7 +142,7 @@ async function persist() {
         </p>
 
         <div class="flex flex-wrap gap-x-5 gap-y-1 text-xs opacity-70">
-          <span>Stufe {{ model.stage }} · Erfassen</span>
+          <span>{{ STAGE_TITLE[model.stage] }}</span>
           <span>{{ formatBytes(modelSize(model)) }}</span>
           <span>Lizenz {{ model.license }}</span>
           <a class="link" :href="model.source" target="_blank" rel="noopener noreferrer">Quelle: {{ model.publisher }}</a>
@@ -189,5 +206,6 @@ async function persist() {
         </div>
       </div>
     </section>
+    </template>
   </div>
 </template>

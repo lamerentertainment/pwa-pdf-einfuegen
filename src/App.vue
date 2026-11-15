@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import ModeSwitch from './components/ModeSwitch.vue';
 import ErfassenView from './views/ErfassenView.vue';
 import VerarbeitenView from './views/VerarbeitenView.vue';
+import TransformierenView from './views/TransformierenView.vue';
 import ModelleView from './views/ModelleView.vue';
 import VerbindungView from './views/VerbindungView.vue';
 import { BUILD, connection } from './net/connection.js';
@@ -10,6 +11,7 @@ import { BUILD, connection } from './net/connection.js';
 const tabs = [
     { id: 'erfassen', label: '1 · Erfassen', component: ErfassenView },
     { id: 'verarbeiten', label: '2 · Verarbeiten', component: VerarbeitenView },
+    { id: 'transformieren', label: '3 · Transformieren', component: TransformierenView },
     { id: 'modelle', label: 'Modelle', component: ModelleView },
     { id: 'verbindung', label: 'Verbindungen', component: VerbindungView },
 ];

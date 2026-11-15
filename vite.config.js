@@ -70,10 +70,10 @@ function offlineApp() {
         },
         closeBundle() {
             // onnxruntime-web references its .wasm via new URL(…, import.meta.url), so Vite emits a
-            // second 13 MB copy. The OCR worker always loads the versioned copy from /vendor
-            // (wasmPaths in src/ocr/ocr.worker.js); the unused one would only bloat the download.
+            // second copy. The OCR and language model workers always load the versioned copy from
+            // /vendor (wasmPaths in their workers); the unused one would only bloat the download.
             for (const file of listFiles(outDir)) {
-                if (/^assets\/ort-wasm[\w-]*\.wasm$/.test(file)) rmSync(join(outDir, file));
+                if (/^assets\/ort-wasm[\w.-]*\.wasm$/.test(file)) rmSync(join(outDir, file));
             }
             const precache = listFiles(outDir)
                 .filter(file => !NOT_PRECACHED.has(file) && !file.endsWith('.map'))

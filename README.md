@@ -19,7 +19,14 @@ Die App ist Open Source, damit jede und jeder nachprüfen kann, was sie tut.
    Zeichen gegen die ursprüngliche Python-Umsetzung; zwei Fehler des Originals sind dabei behoben
    (siehe [`scripts/pdf-einfuegen/generate_golden.py`](scripts/pdf-einfuegen/generate_golden.py)).
    Änderungen werden im Ergebnis hervorgehoben.
-3. **Transformieren** – mit einem kleinen, lokal geladenen Sprachmodell. *(geplant)*
+3. **Transformieren** – mit einem lokalen Sprachmodell nach einer Vorlage umformen, etwa in die
+   indirekte Rede oder als Zusammenfassung. Das Modell läuft im Browser auf der Grafikkarte
+   (WebGPU, [transformers.js](https://huggingface.co/docs/transformers.js)), ohne Internet. Zur Wahl
+   stehen Gemma 3 1B (0,8 GB), Gemma 4 E2B (3,1 GB, empfohlen) und Gemma 4 E4B (4,9 GB); installiert
+   wird nur, was man auf der Seite *Modelle* auswählt. Die 12 Vorlagen stammen aus der promptlibrary
+   ([`src/llm/presets.json`](src/llm/presets.json), übernommen mit
+   [`scripts/presets/import_prompts.py`](scripts/presets/import_prompts.py)) und lassen sich vor dem
+   Ausführen ansehen und anpassen. Das Ergebnis ist ein Entwurf und muss geprüft werden.
 
 ## Zum Ausprobieren
 
@@ -55,8 +62,13 @@ So ist das umgesetzt, und hier lässt es sich nachprüfen:
 - **Updates nur auf Wunsch**: Die App sucht nicht selbst nach Updates. Eine neue Version, die der
   Browser von sich aus findet, wird verworfen und protokolliert.
 - **Modelle** ([`models/catalog.json`](models/catalog.json)): Feste Revision, Grösse, Lizenz und
-  SHA-256 für jede Datei. Gespeichert wird erst nach bestandener Prüfsumme. Auf der Seite *Modelle*
+  SHA-256 für jede Datei (für die Sprachmodelle festgelegt mit
+  [`scripts/models/pin-llm.mjs`](scripts/models/pin-llm.mjs)). Die Prüfsumme wird beim Herunterladen
+  laufend berechnet; stimmt sie nicht, wird die Datei sofort gelöscht. Auf der Seite *Modelle*
   lassen sich Modelle laden, nachprüfen und löschen.
+- **Sprachmodelle ohne Netz** ([`src/llm/llm.worker.js`](src/llm/llm.worker.js)): transformers.js
+  erhält eine eigene Abruffunktion, die nur aus dem geprüften Modellspeicher liest. Selbst im Modus
+  Verbunden kann das Sprachmodell nichts nachladen; die ONNX Runtime kommt aus `/vendor`, nicht vom CDN.
 - **Nachvollziehbarer Build**: Veröffentlicht wird nur per [GitHub Action](.github/workflows/deploy.yml)
   aus diesem Repository. Die App zeigt in der Fusszeile den Commit, aus dem sie gebaut wurde.
 
