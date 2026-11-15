@@ -23,6 +23,8 @@ export function openPdf(data) {
         // Bilddecoder (JBIG2, JPEG 2000) aus public/vendor; ohne sie bleiben Scans leer
         wasmUrl: new URL(`${PDFJS_BASE}wasm/`, document.baseURI).href,
         isEvalSupported: false,
+        // Nur echte Fehler melden, keine Hinweise zu Schrift-Feinheiten (TrueType-Hinting u. ä.)
+        verbosity: pdfjsLib.VerbosityLevel.ERRORS,
     }).promise;
 }
 

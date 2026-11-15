@@ -369,3 +369,24 @@ describe('Zeilenabstand', () => {
         expect(reconstructPageText(items)).toBe('Erster Absatz, Zeile eins\nErster Absatz, Zeile zwei\n\nZweiter Absatz');
     });
 });
+
+describe('Silbentrennung am Zeilenende', () => {
+    const page = lines => [{
+        view: [0, 0, 595, 842],
+        items: lines.map((str, i) => ({ str, transform: [12, 0, 0, 12, 72, 700 - i * 14], width: str.length * 6, height: 12 })),
+    }];
+
+    it.each([
+        ['Bindestrich', '-'],
+        ['typografischer Bindestrich (U+2010)', '‐'],
+        ['geschützter Bindestrich (U+2011)', '‑'],
+        ['weicher Trennstrich (U+00AD)', '­'],
+        ['weicher Trennstrich mit U+2010', '­‐'],
+    ])('fügt Wörter mit %s zusammen', (_, hyphen) => {
+        expect(reconstructDocumentText(page([`als Buch${hyphen}`, 'halterin angestellt']))).toBe('als Buchhalterin angestellt');
+    });
+
+    it('lässt Aufzählungen mit «und» stehen', () => {
+        expect(reconstructDocumentText(page(['Ein‐', 'und Ausgang']))).toBe('Ein‐\nund Ausgang');
+    });
+});

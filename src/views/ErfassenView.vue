@@ -5,6 +5,7 @@ import ReviewPane from '../components/ReviewPane.vue';
 import { cancel, closeDocument, documentState, openFile } from '../capture/documentStore.js';
 import { joinPages } from '../capture/joinPages.js';
 import ocrService, { LAYOUT_MODEL_ID, OCR_MODEL_ID } from '../ocr/ocrService.js';
+import { EXAMPLES, exampleUrl, loadExample } from '../capture/examples.js';
 
 const emit = defineEmits(['navigate']);
 
@@ -47,6 +48,14 @@ function pick(files) {
 function onDrop(event) {
     dragging.value = false;
     pick(event.dataTransfer.files);
+}
+
+async function openExample(example) {
+    try {
+        openFile(await loadExample(example));
+    } catch (err) {
+        documentState.error = err.message;
+    }
 }
 
 async function copyAll() {
@@ -115,6 +124,29 @@ function noticeText(notice) {
         </div>
 
         <p v-if="documentState.error" class="text-sm text-error">{{ documentState.error }}</p>
+
+        <div v-if="!documentState.busy" class="space-y-2">
+          <h3 class="text-sm font-semibold">Zum Ausprobieren</h3>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div v-for="example in EXAMPLES" :key="example.file" class="flex flex-col gap-2 rounded-box border border-base-300 p-3">
+              <div class="flex items-start justify-between gap-2">
+                <span class="font-medium">{{ example.title }}</span>
+                <span v-if="example.needsOcr" class="badge badge-sm" :class="installed.ocr ? 'badge-success' : 'badge-warning'">
+                  {{ installed.ocr ? 'Texterkennung bereit' : 'braucht Texterkennung' }}
+                </span>
+              </div>
+              <p class="text-xs opacity-75">{{ example.description }}</p>
+              <p v-if="example.needsOcr && !installed.ocr" class="text-xs opacity-75">
+                Ohne Modell zeigt die App nur die fehlerhafte Textebene des Scanners.
+                <button class="link" @click="emit('navigate', 'modelle')">Modell installieren</button>
+              </p>
+              <div class="mt-auto flex items-center gap-3">
+                <button class="btn btn-sm" @click="openExample(example)">Öffnen</button>
+                <a class="link text-xs" :href="exampleUrl(example)" :download="example.file">Herunterladen</a>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div class="grid gap-x-8 gap-y-2 text-sm md:grid-cols-2">
           <div class="flex items-center gap-2">

@@ -21,6 +21,20 @@ Die App ist Open Source, damit jede und jeder nachprüfen kann, was sie tut.
    Änderungen werden im Ergebnis hervorgehoben.
 3. **Transformieren** – mit einem kleinen, lokal geladenen Sprachmodell. *(geplant)*
 
+## Zum Ausprobieren
+
+Unter *Erfassen* stehen zwei Beispieldokumente bereit (auch zum Herunterladen, in
+[`public/beispiele/`](public/beispiele/)):
+
+- **Gescannte Einvernahme** (9 Seiten) – ein Scan mit fehlerhafter Textebene des Scanners
+  («lch», «lhnen»), zeigt die Texterkennung und die Prüfansicht. Dafür unter *Modelle* die
+  Texterkennung installieren.
+- **Fiktiver Entscheid** (5 Seiten, digitales PDF) – eingebetteter Text mit Silbentrennung am
+  Zeilenende, Inhaltsverzeichnis, Fussnoten, Tabellen, Listen sowie Kopf- und Fusszeilen.
+  Erzeugt aus [`scripts/beispiele/entscheid.html`](scripts/beispiele/entscheid.html).
+
+Alle Personen, Orte und Geschäftsnummern in den Beispielen sind frei erfunden.
+
 ## Wann die App ins Internet geht
 
 | Modus | Netzwerk | Wofür |

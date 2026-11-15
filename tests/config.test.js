@@ -54,3 +54,14 @@ describe('Modellkatalog', () => {
         }
     });
 });
+
+describe('Beispieldokumente', () => {
+    it('liegen alle in public/beispiele', async () => {
+        const { EXAMPLES } = await import('../src/capture/examples.js');
+        const { statSync } = await import('node:fs');
+        for (const example of EXAMPLES) {
+            const size = statSync(new URL(`../public/beispiele/${example.file}`, import.meta.url)).size;
+            expect(size, example.file).toBeGreaterThan(1000);
+        }
+    });
+});

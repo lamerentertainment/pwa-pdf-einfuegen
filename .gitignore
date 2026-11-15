@@ -6,6 +6,7 @@ dist/
 .env*
 .idea/
 .vscode/
-# Testdokumente nie einchecken
+# Testdokumente nie einchecken – ausser den veröffentlichten Beispielen
 *.pdf
+!public/beispiele/*.pdf
 public/vendor/

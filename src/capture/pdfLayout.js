@@ -130,11 +130,14 @@ function marginLines(boxes, view) {
 // Joins words split by a line-end hyphen ("Verwal-\ntung" → "Verwaltung"). A following
 // capital letter or conjunction ("Ein- und Ausgang", "E-\nMail") keeps the hyphen.
 // The next line may be indented (structure option): its leading spaces go with the hyphen.
+// Line-end hyphens come as "-" (U+002D), as soft hyphen (U+00AD, some PDF tools) or as the
+// typographic hyphen U+2010/U+2011 (Chrome and others print a soft hyphen that way when they
+// break a word), sometimes as soft hyphen followed by U+2010.
 function dehyphenate(text) {
     return text
-        .replace(/\u00AD\n+ */g, '')
+        .replace(/\u00AD[\u2010\u2011]?\n+ */g, '')
         .replace(
-            /([A-Za-zÄÖÜäöüß])-\n{1,2} *(?!(?:und|oder|bzw|sowie|resp|bis|and|or|et|ou)\b)(?=[a-zäöüß])/g,
+            /([A-Za-zÄÖÜäöüß])[-\u2010\u2011]\n{1,2} *(?!(?:und|oder|bzw|sowie|resp|bis|and|or|et|ou)\b)(?=[a-zäöüß])/g,
             '$1'
         );
 }
