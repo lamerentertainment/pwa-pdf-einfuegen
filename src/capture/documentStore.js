@@ -2,6 +2,7 @@
 // gespeichert, und beim Schliessen oder Neuladen ist es weg.
 import { markRaw, reactive } from 'vue';
 import { DEFAULT_OPTIONS } from './options.js';
+import { buildPageTexts } from './pageModel.js';
 
 export const documentState = reactive({
     fileName: null,
@@ -49,6 +50,19 @@ export async function openFile(file) {
     } finally {
         Object.assign(documentState, { busy: false, status: '', progress: 0, controller: null });
     }
+}
+
+/**
+ * Baut den Text aller Seiten mit geänderten Einstellungen neu auf – aus den bereits erkannten
+ * Zeilen, ohne die Texterkennung zu wiederholen. Eigene Bearbeitungen gehen dabei verloren.
+ */
+export function relayoutDocument(changes) {
+    Object.assign(documentState.options, changes);
+    const texts = buildPageTexts(documentState.pages, documentState.options);
+    documentState.pages.forEach((page, i) => {
+        page.text = texts[i];
+        page.originalText = texts[i];
+    });
 }
 
 export function cancel() {

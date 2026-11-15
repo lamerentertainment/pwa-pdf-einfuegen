@@ -1,10 +1,12 @@
 <script setup>
 // Prüfansicht: links die PDF-Seite mit den erkannten Zeilen, rechts der erfasste Text dieser Seite.
 // Ein Klick auf eine Zeile im PDF markiert sie im Text, ein Klick im Text markiert die Zeile im PDF.
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import PageView from './PageView.vue';
-import { documentState } from '../capture/documentStore.js';
+import { documentState, relayoutDocument } from '../capture/documentStore.js';
+import { hasMarkdownTable, renderMarkdown } from '../capture/markdown.js';
+import { usePreference } from './usePreference.js';
 import { UNCERTAIN_SCORE } from '../capture/options.js';
 import { useResizable } from './useResizable.js';
 
@@ -25,6 +27,38 @@ const hint = ref('');
 const textarea = ref(null);
 const splitBox = ref(null);
 const layout = useResizable('pruefansicht', { ratio: 0.5 });
+
+// Darstellung rechts: bearbeitbarer Text oder gerendertes Markdown (Tabellen, Listen, Überschriften)
+const view = usePreference('pruefansicht.ansicht', 'text');
+const wrapLines = usePreference('pruefansicht.umbruch', true);
+const rendered = computed(() => (view.value === 'markdown' ? renderMarkdown(page.value.text) : ''));
+const pageHasTable = computed(() => hasMarkdownTable(page.value.text));
+
+// Textaufbau nachträglich ändern – aus den erkannten Zeilen, ohne neue Texterkennung
+const LAYOUT_KEYS = ['tables', 'structure', 'keepLineNumbers', 'markUncertain'];
+const draft = reactive(Object.fromEntries(LAYOUT_KEYS.map(key => [key, documentState.options[key]])));
+const draftChanged = computed(() => LAYOUT_KEYS.some(key => draft[key] !== documentState.options[key]));
+const anyEdited = computed(() => documentState.pages.some(p => p.text !== p.originalText));
+const confirmRelayout = ref(false);
+
+function applyRelayout() {
+    if (anyEdited.value && !confirmRelayout.value) {
+        confirmRelayout.value = true;
+        return;
+    }
+    relayoutDocument({ ...draft });
+    confirmRelayout.value = false;
+}
+
+function cancelRelayout() {
+    for (const key of LAYOUT_KEYS) draft[key] = documentState.options[key];
+    confirmRelayout.value = false;
+}
+
+function enableTables() {
+    draft.tables = true;
+    applyRelayout();
+}
 
 // Nebeneinander erst ab 1024 px Breite
 const media = window.matchMedia('(min-width: 1024px)');
@@ -66,6 +100,11 @@ function locate(text, boxText) {
 
 async function selectBox(i) {
     activeBox.value = i;
+    // Markieren geht nur im bearbeitbaren Text
+    if (view.value !== 'text') {
+        view.value = 'text';
+        await nextTick();
+    }
     const box = page.value.boxes[i];
     const range = locate(page.value.text, box.text);
     hint.value = range ? '' : `«${box.text}» kommt im Text nicht mehr wörtlich vor (bearbeitet oder zusammengefügt).`;
@@ -142,6 +181,30 @@ function reset() {
       <span>Klick auf eine Zeile markiert sie im Text und umgekehrt.</span>
     </div>
 
+    <div class="flex flex-wrap items-start gap-x-5 gap-y-2 text-sm">
+      <div class="join" role="radiogroup" aria-label="Darstellung des Texts">
+        <button class="btn btn-xs join-item" :class="{ 'btn-primary': view === 'text' }" role="radio" :aria-checked="view === 'text'" @click="view = 'text'">Text</button>
+        <button class="btn btn-xs join-item" :class="{ 'btn-primary': view === 'markdown' }" role="radio" :aria-checked="view === 'markdown'" @click="view = 'markdown'">Markdown</button>
+      </div>
+      <label v-if="view === 'text'" class="flex items-center gap-2">
+        <input v-model="wrapLines" type="checkbox" class="checkbox checkbox-xs" /> Zeilen umbrechen
+      </label>
+      <details class="ml-auto" @toggle="cancelRelayout">
+        <summary class="cursor-pointer select-none">Textaufbau anpassen</summary>
+        <div class="mt-2 flex flex-col gap-1.5 rounded-box border border-base-300 bg-base-100 p-3">
+          <label class="flex items-center gap-2"><input v-model="draft.tables" type="checkbox" class="checkbox checkbox-xs" /> Tabellen als Markdown-Tabellen</label>
+          <label class="flex items-center gap-2"><input v-model="draft.structure" type="checkbox" class="checkbox checkbox-xs" /> Einrückungen und Spalten-Text erhalten</label>
+          <label class="flex items-center gap-2"><input v-model="draft.keepLineNumbers" type="checkbox" class="checkbox checkbox-xs" /> Zeilennummern am Rand behalten</label>
+          <label class="flex items-center gap-2"><input v-model="draft.markUncertain" type="checkbox" class="checkbox checkbox-xs" /> Unsichere Zeilen mit [?] markieren</label>
+          <p class="text-xs opacity-70">Der Text wird aus den bereits erkannten Zeilen neu aufgebaut, ohne neue Texterkennung.</p>
+          <p v-if="confirmRelayout" class="text-xs text-warning">Deine Bearbeitungen gehen dabei verloren. Nochmals klicken zum Bestätigen.</p>
+          <button class="btn btn-xs btn-primary self-start" :disabled="!draftChanged" @click="applyRelayout">
+            {{ confirmRelayout ? 'Trotzdem neu aufbauen' : 'Text neu aufbauen' }}
+          </button>
+        </div>
+      </details>
+    </div>
+
     <!-- Breit: PDF und Text nebeneinander, Trenner seitlich und Höhe unten ziehbar.
          Schmal: untereinander. -->
     <div
@@ -180,10 +243,27 @@ function reset() {
         <span class="h-16 w-1 rounded-full bg-base-content/25 transition-colors group-hover:bg-primary group-focus:bg-primary" />
       </div>
       <div class="flex min-w-0 flex-1 flex-col gap-2" :class="{ 'h-[70vh]': !wide }">
+        <template v-if="view === 'markdown'">
+          <div v-if="!documentState.options.tables" role="note" class="alert alert-info alert-soft py-2 text-xs">
+            <span>Tabellen erscheinen hier, wenn der Textaufbau sie als Markdown-Tabellen erkennt.</span>
+            <button class="btn btn-xs" @click="enableTables">{{ confirmRelayout ? 'Trotzdem (Bearbeitungen gehen verloren)' : 'Tabellen erkennen' }}</button>
+          </div>
+          <!-- Bereinigt durch DOMPurify (src/capture/markdown.js) -->
+          <div
+            class="markdown h-full overflow-auto rounded-field border border-base-300 bg-base-100 p-4 text-sm"
+            data-testid="markdown"
+            :aria-label="`Seite ${page.number} als Markdown`"
+            v-html="rendered"
+          />
+          <p v-if="documentState.options.tables && !pageHasTable" class="text-xs opacity-60">Auf dieser Seite wurde keine Tabelle erkannt.</p>
+        </template>
         <textarea
+          v-else
           ref="textarea"
           v-model="page.text"
           class="textarea h-full w-full resize-none font-mono text-sm leading-6"
+          :class="{ 'overflow-x-auto whitespace-pre': !wrapLines }"
+          :wrap="wrapLines ? 'soft' : 'off'"
           spellcheck="false"
           :aria-label="`Text von Seite ${page.number}`"
           @click="syncFromText"
