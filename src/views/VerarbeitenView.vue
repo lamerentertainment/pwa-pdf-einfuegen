@@ -7,6 +7,8 @@ import { MODES, processText, WORDLIST_SOURCE } from '../process/rules.js';
 import { diffParagraphs } from '../process/diff.js';
 import { mapPosition } from '../process/align.js';
 import { processState } from '../process/processStore.js';
+import LineBreakBackdrop from '../components/LineBreakBackdrop.vue';
+import { usePreference } from '../components/usePreference.js';
 import { elementVisibleTop, scrollElementTo, scrollTextareaTo, textareaVisibleTop } from '../components/textPosition.js';
 
 // Gemeinsam mit Stufe 3 (processStore), damit diese das Ergebnis übernehmen kann
@@ -59,6 +61,8 @@ const changedCount = computed(() => tokens.value?.filter(t => t.changed).length 
 
 // --- Klick auf eine Stelle: entsprechende Stelle im anderen Feld auf dieselbe Höhe setzen ---
 const inputEl = ref(null);
+// Zeilenumbrüche der Eingabe als graue Zeichen anzeigen (Standard: an, vom Browser gemerkt)
+const showBreaks = usePreference('verarbeiten.umbrueche', true);
 const outputEl = ref(null); // Textfeld oder hervorgehobene Ansicht
 const inputBox = ref(null);
 const outputBox = ref(null);
@@ -175,16 +179,21 @@ function download() {
         <div class="card-body gap-2 p-4">
           <div class="flex flex-wrap items-center gap-2">
             <h3 class="font-semibold">Eingabe</h3>
+            <label class="flex items-center gap-1.5 text-xs opacity-80" title="Zeigt jeden Zeilenumbruch als graues ↵ (nur Anzeige, der Text bleibt unverändert)">
+              <input v-model="showBreaks" type="checkbox" class="checkbox checkbox-xs" /> Umbrüche ↵
+            </label>
             <button v-if="hasDocument" class="btn btn-xs ml-auto" @click="fromCapture">
               <DocumentArrowDownIcon class="size-4" /> Text aus Stufe 1 übernehmen
             </button>
             <button v-if="input" class="btn btn-xs btn-ghost" :class="{ 'ml-auto': !hasDocument }" @click="input = ''">Leeren</button>
           </div>
           <div ref="inputBox" class="relative">
+            <LineBreakBackdrop v-if="showBreaks" :target="inputEl" :text="input" />
             <textarea
               ref="inputEl"
               v-model="input"
-              class="textarea h-[65vh] min-h-48 w-full resize-y font-mono text-sm leading-6"
+              class="textarea relative h-[65vh] min-h-48 w-full resize-y font-mono text-sm leading-6 [scrollbar-gutter:stable]"
+              :class="{ 'bg-transparent': showBreaks }"
               placeholder="Text hier einfügen, z. B. eine Passage aus einem PDF oder einer Einvernahme …"
               spellcheck="false"
               aria-label="Eingabe"

@@ -2,7 +2,7 @@
 // scrollt man, damit sie auf einer bestimmten Höhe erscheint? Höhen sind relativ zur Oberkante
 // des Elements (Rahmen eingeschlossen), so wie der Nutzer sie sieht.
 
-const MIRRORED = [
+export const MIRRORED = [
     'boxSizing', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
     'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderStyle',
     'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight',
