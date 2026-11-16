@@ -5,6 +5,8 @@
 // Koordinaten in Punkten, Ursprung oben links (wie die Boxen der Prüfansicht).
 // Zeilen ohne Bereich gehören zum Pseudo-Bereich REST_ID («ohne Bereich»).
 
+import { trimPage } from './joinPages.js';
+
 export const REST_ID = 'rest';
 
 /** Deutsche Namen der Bereichstypen des Layoutmodells (PP-DocLayout_plus-L). */
@@ -193,5 +195,6 @@ export function layoutPageText(pageNumber, pageOf, groups, regionText, combinedT
             blocks.push(regionText(pageNumber, id));
         }
     }
-    return blocks.map(b => b.trim()).filter(Boolean).join('\n\n');
+    // Nur leere Zeilen vorne weg: die Einrückung der ersten Zeile bleibt
+    return blocks.map(trimPage).filter(Boolean).join('\n\n');
 }

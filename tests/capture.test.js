@@ -58,6 +58,11 @@ describe('buildPageTexts', () => {
         expect(texts).toEqual(['Erste Seite.', '', 'Dritte Seite.']);
     });
 
+    it('lässt die Einrückung der ersten Zeile einer Seite stehen', () => {
+        const indented = { view, items: [item('Eingerückt', 108, 700), item('Bündig eins', 72, 686), item('Bündig zwei', 72, 672)] };
+        expect(buildPageTexts([indented], DEFAULT_OPTIONS)[0]).toBe('      Eingerückt\nBündig eins\nBündig zwei');
+    });
+
     it('bleibt korrekt, wenn ein Dokument selbst eine Trennerzeile enthält', () => {
         const texts = buildPageTexts([page(['--- PWA_PDF_SEITE 7 ---']), page(['Zwei'])], DEFAULT_OPTIONS);
         expect(texts).toHaveLength(2);
@@ -74,6 +79,12 @@ describe('joinPages', () => {
 
     it('setzt auf Wunsch Seitenmarker', () => {
         expect(joinPages(pages, { pageMarkers: true })).toBe('--- Seite 1 ---\n\nEins\n\n--- Seite 2 ---\n\n--- Seite 3 ---\n\nDrei');
+    });
+
+    it('lässt die Einrückung der ersten Zeile einer Seite stehen', () => {
+        const indented = [{ number: 1, text: 'Eins' }, { number: 2, text: '\n    eingerückt\n' }];
+        expect(joinPages(indented)).toBe('Eins\n\n    eingerückt');
+        expect(joinPages(indented, { pageMarkers: true })).toBe('--- Seite 1 ---\n\nEins\n\n--- Seite 2 ---\n\n    eingerückt');
     });
 });
 
@@ -118,6 +129,52 @@ describe('buildPageTexts mit Layoutbereichen', () => {
         expect(buildPageTexts([asTable], options)[0]).toMatch(/^\| Datum \| Betrag \|\n\| --- \| --- \|/);
         expect(buildPageTexts([asText], options)[0]).not.toContain('|');
         expect(buildPageTexts([asTable], DEFAULT_OPTIONS)[0]).not.toContain('|');
+    });
+});
+
+describe('Layoutbereiche an der ganzen Seite gemessen', () => {
+    const view = [0, 0, 595, 842];
+    const at = (str, x, y, region) => ({ ...item(str, x, y), region });
+    const region = id => ({ id, label: id === 'rest' ? 'rest' : 'text', enabled: true });
+    const page = (ids, items) => ({ number: 1, view, items, layout: { regions: ids.map(region), order: ids } });
+    const structure = { ...DEFAULT_OPTIONS, structure: true };
+    const flat = { ...DEFAULT_OPTIONS, structure: false };
+
+    it('behält die Einrückung eines eingerückten Bereichs, auch auf seiner ersten Zeile', () => {
+        const p = page(['a', 'q', 'b'], [
+            at('Normaler Text eins.', 72, 700, 'a'), at('Normaler Text zwei.', 72, 688, 'a'),
+            at('Zitat Zeile eins.', 108, 660, 'q'), at('Zitat Zeile zwei.', 108, 648, 'q'),
+            at('Wieder normal.', 72, 620, 'b'),
+        ]);
+        expect(buildPageTexts([p], structure)[0]).toBe(
+            'Normaler Text eins.\nNormaler Text zwei.\n\n      Zitat Zeile eins.\n      Zitat Zeile zwei.\n\nWieder normal.');
+        expect(buildPageTexts([p], flat)[0]).not.toMatch(/^ /m);
+    });
+
+    it('misst eine rechte Spalte an ihrem eigenen Rand', () => {
+        const ys = [700, 688, 676];
+        const p = page(['l', 'r'], [
+            ...ys.map((y, i) => at(`Links Zeile ${'abc'[i]}`, 72, y, 'l')),
+            ...ys.map((y, i) => at(`Rechts Zeile ${'abc'[i]}`, 320, y, 'r')),
+        ]);
+        expect(buildPageTexts([p], structure)[0]).toBe(
+            'Links Zeile a\nLinks Zeile b\nLinks Zeile c\n\nRechts Zeile a\nRechts Zeile b\nRechts Zeile c');
+    });
+
+    describe('Zeilennummern ausserhalb der Bereiche', () => {
+        const words = ['eins', 'zwei', 'drei', 'vier', 'fünf', 'sechs'];
+        const numbered = () => page(['rest', 'a'], words.flatMap((w, i) => [
+            at(String(i + 1), 20, 700 - 12 * i, 'rest'), at(`Zeile ${w}`, 72, 700 - 12 * i, 'a'),
+        ]));
+
+        it('setzt sie auf Wunsch vor ihre Zeile im Textbereich', () => {
+            const text = buildPageTexts([numbered()], { ...DEFAULT_OPTIONS, keepLineNumbers: true })[0];
+            expect(text).toBe(words.map((w, i) => `${i + 1}  Zeile ${w}`).join('\n'));
+        });
+
+        it('lässt sie sonst weg, statt sie als eigenen Block auszugeben', () => {
+            expect(buildPageTexts([numbered()], DEFAULT_OPTIONS)[0]).toBe(words.map(w => `Zeile ${w}`).join('\n'));
+        });
     });
 });
 

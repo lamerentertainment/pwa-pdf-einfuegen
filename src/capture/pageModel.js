@@ -2,8 +2,9 @@
 //
 // Koordinaten der Boxen: Seite bei Massstab 1 (PDF-Punkte), Ursprung oben links, Drehung der
 // Seite schon angewendet – so können sie direkt über die gerenderte Seite gelegt werden.
-import { reconstructDocumentText, reconstructPageText } from './pdfLayout.js';
+import { reconstructDocumentText, reconstructPartText } from './pdfLayout.js';
 import { layoutPageText } from './layoutRegions.js';
+import { trimPage } from './joinPages.js';
 import { UNCERTAIN_SCORE } from './options.js';
 
 // Seitentrenner, die nur intern zum Aufteilen des Gesamttexts dienen
@@ -47,7 +48,7 @@ export function splitPages(text, count) {
     const pages = [];
     for (let i = 0; i < count; i++) {
         if (Number(parts[1 + 2 * i]) !== i + 1) return null;
-        pages.push(parts[2 + 2 * i].trim());
+        pages.push(trimPage(parts[2 + 2 * i]));
     }
     return pages;
 }
@@ -168,10 +169,16 @@ function regionOptions(page, regionIds, layoutOptions) {
     return { ...layoutOptions, tables: Boolean(layoutOptions.tables && isTable), tableRegion: Boolean(isTable) };
 }
 
-/** Text eines oder mehrerer Layoutbereiche: nur ihre Zeilen, mit dem üblichen Textaufbau. */
+/**
+ * Text eines oder mehrerer Layoutbereiche: nur ihre Zeilen, aber an der ganzen Seite gemessen.
+ * Zeilennummern am Rand werden auf der ganzen Seite erkannt (sie liegen meist in keinem Bereich),
+ * Einrückungen zählen ab dem Rand der Seitenspalte, die die eingeschalteten Bereiche bilden.
+ */
 export function regionText(page, regionId, layoutOptions) {
     const ids = Array.isArray(regionId) ? regionId : [regionId];
-    return reconstructPageText(page.items.filter(item => ids.includes(item.region)), regionOptions(page, ids, layoutOptions));
+    const enabled = new Set((page.layout?.regions ?? []).filter(r => r.enabled).map(r => r.id));
+    return reconstructPartText(page.items, item => ids.includes(item.region), regionOptions(page, ids, layoutOptions),
+        item => enabled.has(item.region));
 }
 
 /**
@@ -222,7 +229,7 @@ export function buildPageTexts(pages, options, groups = []) {
         const notes = pages.flatMap(footnotesOf);
         if (notes.length) {
             const last = texts.length - 1;
-            texts[last] = [texts[last].trim(), FOOTNOTE_MARKER, ...notes].filter(Boolean).join('\n\n');
+            texts[last] = [trimPage(texts[last]), FOOTNOTE_MARKER, ...notes].filter(Boolean).join('\n\n');
         }
     } else if (layoutOptions.footnotes === 'markdown') {
         // Markdown-Fussnoten: [^1] an der Fundstelle, die Definitionen am Dokumentende
@@ -245,7 +252,7 @@ export function buildPageTexts(pages, options, groups = []) {
         });
         if (definitions.length) {
             const last = texts.length - 1;
-            texts[last] = [texts[last].trim(), ...definitions].filter(Boolean).join('\n\n');
+            texts[last] = [trimPage(texts[last]), ...definitions].filter(Boolean).join('\n\n');
         }
     }
     return texts;

@@ -22,7 +22,7 @@ function toBoxes(items, { uncertainBelow } = {}) {
         .filter(item => item.str && item.str.trim().length > 0)
         .map(item => {
             const [, , , , x, y] = item.transform;
-            const box = { str: item.str, x, y, w: item.width, h: Math.abs(item.height) || 12 };
+            const box = { str: item.str, x, y, w: item.width, h: Math.abs(item.height) || 12, item };
             if (uncertainBelow !== undefined && item.ocrScore < uncertainBelow) box.uncertain = true;
             return box;
         });
@@ -53,7 +53,7 @@ function buildContext(boxes) {
 function layoutBoxes(boxes, options = {}) {
     if (boxes.length === 0) return '';
     const ctx = buildContext(boxes);
-    const left = options.structure ? baseLeft(boxes, ctx) : undefined;
+    const left = options.structure ? (options.left ?? baseLeft(boxes, ctx)) : undefined;
     const { lines, regions } = findRegions(boxes, ctx, options);
     if (regions.length === 0) return renderFlow(boxes, ctx, left);
 
@@ -85,6 +85,38 @@ function renderFlow(boxes, ctx, left) {
 
 export function reconstructPageText(items, options = {}) {
     return layoutBoxes(stripLineNumbers(toBoxes(items, options), options), options);
+}
+
+/**
+ * Text of part of a page (the lines of one or more layout regions), set against the whole page:
+ * margin line numbers are found among all of the page's items (they usually sit outside every
+ * region), and with `structure` indentation counts from the margin of the page's column the part
+ * lies in, not from the part's own left edge (an indented quote is a region of its own).
+ * @param {Array} items all pdf.js text items of the page
+ * @param {(item) => boolean} isPart the items to render
+ * @param {object} [options] see top of file
+ * @param {(item) => boolean} [isText] the items that make up the page's text (enabled regions):
+ *   they set the margins
+ */
+export function reconstructPartText(items, isPart, options = {}, isText = () => true) {
+    const boxes = stripLineNumbers(toBoxes(items, options), options);
+    const part = boxes.filter(b => isPart(b.item));
+    if (!options.structure || part.length === 0) return layoutBoxes(part, options);
+    const text = boxes.filter(b => isText(b.item) || isPart(b.item));
+    return layoutBoxes(part, { ...options, left: partLeft(part, text) });
+}
+
+// Margin of a part of the page: the XY-cut of the page's text gives every column its margin, as
+// on a page read without layout regions; the part takes that of the column most of it lies in.
+function partLeft(part, text) {
+    const ctx = buildContext(text);
+    const inPart = new Set(part);
+    const counts = new Map();
+    for (const block of xyCut(text, ctx, baseLeft(text, ctx))) {
+        const n = block.boxes.filter(b => inPart.has(b)).length;
+        if (n) counts.set(block.left, (counts.get(block.left) ?? 0) + n);
+    }
+    return [...counts].sort((a, b) => b[1] - a[1])[0][0];
 }
 
 // --- Document level: header/footer removal and de-hyphenation -------------------------------

@@ -74,6 +74,11 @@ describe('Verbinden und Seitentext', () => {
         expect(layoutPageText(1, pageOf, [], regionText)).toBe('Erster Absatz.\n\nEin Absatz über die Seiten-');
     });
 
+    it('lässt die Einrückung am Anfang eines Bereichs stehen', () => {
+        const indented = (p, id) => (id === 'a' ? '\n    Eingerückt.\n' : texts[`${p}:${id}`]);
+        expect(layoutPageText(1, pageOf, [], indented)).toBe('    Eingerückt.\n\nEin Absatz über die Seiten-');
+    });
+
     it('verbindet Bereiche über eine Seitengrenze an der Stelle des ersten Mitglieds', () => {
         const groups = mergeGroups([], [{ page: 2, id: 'c' }, { page: 1, id: 'b' }], orderOfPage, 'g1');
         expect(groups[0].members).toEqual([{ page: 1, id: 'b' }, { page: 2, id: 'c' }]);
