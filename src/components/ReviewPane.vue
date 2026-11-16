@@ -4,7 +4,11 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import PageView from './PageView.vue';
-import { documentState, relayoutDocument } from '../capture/documentStore.js';
+import RegionPanel from './RegionPanel.vue';
+import {
+    defaultOrder, mergeGroups, moveInOrder, orderFromClicks,
+} from '../capture/layoutRegions.js';
+import { applyLayoutChange, documentState, relayoutDocument } from '../capture/documentStore.js';
 import { hasMarkdownTable, renderMarkdown } from '../capture/markdown.js';
 import { usePreference } from './usePreference.js';
 import { UNCERTAIN_SCORE } from '../capture/options.js';
@@ -159,6 +163,113 @@ function nextUncertain() {
     selectBox(next);
 }
 
+// --- Layoutbereiche bearbeiten -------------------------------------------------------------
+const hasLayout = computed(() => pages.value.some(p => p.layout));
+const regionMode = ref(false);
+const selection = ref([]); // [{ page, id }], auch über Seiten hinweg
+const orderMode = ref(false);
+const orderClicks = ref([]);
+const conflict = ref(null);
+let pendingChange = null;
+
+const pageByNumber = n => documentState.pages.find(p => p.number === n);
+const findRegion = (n, id) => pageByNumber(n)?.layout?.regions.find(r => r.id === id);
+const selectedHere = computed(() => selection.value.filter(s => s.page === page.value.number).map(s => s.id));
+const orderNumbers = computed(() => {
+    const layout = page.value.layout;
+    if (!layout) return {};
+    const result = {};
+    let n = 0;
+    for (const id of layout.order) if (layout.regions.find(r => r.id === id)?.enabled) result[id] = ++n;
+    return result;
+});
+
+// Jede Änderung beschreibt sich über Seite und ID: nach einem Rücksetzen (Konflikt) gilt sie
+// ebenso für die wiederhergestellten Objekte
+function change(mutate) {
+    conflict.value = null;
+    const { conflicts } = applyLayoutChange(mutate);
+    if (conflicts.length) {
+        conflict.value = conflicts;
+        pendingChange = mutate;
+    }
+}
+
+function forceChange() {
+    if (pendingChange) applyLayoutChange(pendingChange, { force: true });
+    pendingChange = null;
+    conflict.value = null;
+}
+
+function cancelChange() {
+    pendingChange = null;
+    conflict.value = null;
+    if (orderMode.value) orderClicks.value.pop();
+}
+
+function toggleRegion(id) {
+    const n = page.value.number;
+    change(() => { const r = findRegion(n, id); r.enabled = !r.enabled; });
+}
+
+function setType(label, enabled) {
+    change(() => {
+        for (const p of documentState.pages) for (const r of p.layout?.regions ?? []) if (r.label === label) r.enabled = enabled;
+    });
+}
+
+function moveRegion(id, delta) {
+    const n = page.value.number;
+    change(() => { const l = pageByNumber(n).layout; l.order = moveInOrder(l.order, id, delta); });
+}
+
+function resetOrder() {
+    const n = page.value.number;
+    orderClicks.value = [];
+    change(() => { const l = pageByNumber(n).layout; l.order = defaultOrder(l); });
+}
+
+function toggleOrderMode() {
+    orderMode.value = !orderMode.value;
+    orderClicks.value = [];
+}
+
+function toggleSelect(id) {
+    const n = page.value.number;
+    const at = selection.value.findIndex(s => s.page === n && s.id === id);
+    if (at >= 0) selection.value.splice(at, 1);
+    else selection.value.push({ page: n, id });
+}
+
+function merge(mode = 'folge') {
+    const chosen = selection.value.map(s => ({ ...s }));
+    const id = `g${Date.now()}`;
+    change(() => {
+        documentState.layoutGroups = mergeGroups(documentState.layoutGroups, chosen, n => pageByNumber(n).layout.order, id, mode);
+    });
+    if (!conflict.value) selection.value = [];
+}
+
+function unmerge(groupId) {
+    change(() => { documentState.layoutGroups = documentState.layoutGroups.filter(g => g.id !== groupId); });
+    if (!conflict.value) selection.value = [];
+}
+
+function onRegionClick(id, event) {
+    if (orderMode.value) {
+        if (!orderClicks.value.includes(id)) orderClicks.value.push(id);
+        const n = page.value.number;
+        const clicks = [...orderClicks.value];
+        change(() => { const l = pageByNumber(n).layout; l.order = orderFromClicks(l.order, clicks); });
+    } else if (event.shiftKey || event.metaKey || event.ctrlKey) {
+        toggleSelect(id);
+    } else {
+        toggleRegion(id);
+    }
+}
+
+watch(index, () => { orderClicks.value = []; });
+
 function reset() {
     page.value.text = page.value.originalText;
 }
@@ -187,7 +298,16 @@ function reset() {
       <span v-else-if="uncertainTotal" class="text-sm opacity-60">Im ganzen Dokument: {{ uncertainTotal }} unsichere Zeilen</span>
       <div class="ml-auto flex flex-wrap items-center gap-4 text-sm">
         <label class="flex items-center gap-2"><input v-model="showBoxes" type="checkbox" class="checkbox checkbox-xs" /> Zeilen anzeigen</label>
-        <label v-if="page.regions" class="flex items-center gap-2"><input v-model="showRegions" type="checkbox" class="checkbox checkbox-xs" /> Layoutbereiche</label>
+        <label v-if="page.layout && !regionMode" class="flex items-center gap-2"><input v-model="showRegions" type="checkbox" class="checkbox checkbox-xs" /> Layoutbereiche</label>
+        <button
+          v-if="hasLayout"
+          class="btn btn-xs"
+          :class="{ 'btn-primary': regionMode }"
+          :aria-pressed="regionMode"
+          @click="regionMode = !regionMode; orderMode = false"
+        >
+          {{ regionMode ? 'Bereiche bearbeiten: an' : 'Bereiche bearbeiten' }}
+        </button>
       </div>
     </div>
 
@@ -241,7 +361,11 @@ function reset() {
           :show-boxes="showBoxes"
           :show-regions="showRegions"
           :active-index="activeBox"
+          :region-mode="regionMode"
+          :selected-regions="selectedHere"
+          :order-numbers="orderNumbers"
           @select="selectBox"
+          @region="onRegionClick"
         />
       </div>
       <div
@@ -260,6 +384,30 @@ function reset() {
         <span class="h-16 w-1 rounded-full bg-base-content/25 transition-colors group-hover:bg-primary group-focus:bg-primary" />
       </div>
       <div class="flex min-w-0 flex-1 flex-col gap-2" :class="{ 'h-[70vh]': !wide }">
+        <div v-if="regionMode" class="h-[52%] min-h-56 shrink-0 overflow-hidden rounded-box border border-base-300 bg-base-100 p-3" data-testid="region-panel">
+          <RegionPanel
+            v-if="page.layout"
+            :page="page"
+            :selection="selection"
+            :order-mode="orderMode"
+            :conflict="conflict"
+            @toggle="toggleRegion"
+            @move="moveRegion"
+            @select="toggleSelect"
+            @merge="merge('folge')"
+            @merge-side="merge('nebeneinander')"
+            @unmerge="unmerge"
+            @clear-selection="selection = []"
+            @reset-order="resetOrder"
+            @set-type="setType"
+            @order-mode="toggleOrderMode"
+            @force="forceChange"
+            @cancel-conflict="cancelChange"
+          />
+          <p v-else class="text-sm opacity-70">
+            Diese Seite hat keine Layoutbereiche. Bereiche gibt es auf gescannten Seiten, die mit eingeschaltetem Layoutmodell erfasst wurden.
+          </p>
+        </div>
         <template v-if="view === 'markdown'">
           <div v-if="tablesPending" role="alert" class="alert alert-warning alert-soft py-2 text-xs">
             <span>Für die Tabellen wird der Text neu aufgebaut. Deine Bearbeitungen gehen dabei verloren.</span>
@@ -268,7 +416,7 @@ function reset() {
           </div>
           <!-- Bereinigt durch DOMPurify (src/capture/markdown.js) -->
           <div
-            class="markdown h-full overflow-auto rounded-field border border-base-300 bg-base-100 p-4 text-sm"
+            class="markdown min-h-0 flex-1 overflow-auto rounded-field border border-base-300 bg-base-100 p-4 text-sm"
             data-testid="markdown"
             :aria-label="`Seite ${page.number} in der Tabellenansicht`"
             v-html="rendered"
@@ -279,7 +427,7 @@ function reset() {
           v-else
           ref="textarea"
           v-model="page.text"
-          class="textarea h-full w-full resize-none font-mono text-sm leading-6"
+          class="textarea min-h-0 w-full flex-1 resize-none font-mono text-sm leading-6"
           :class="{ 'overflow-x-auto whitespace-pre': !wrapLines }"
           :wrap="wrapLines ? 'soft' : 'off'"
           spellcheck="false"

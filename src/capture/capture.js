@@ -6,10 +6,10 @@
 // Seite schon angewendet – so können sie direkt über die gerenderte Seite gelegt werden.
 import * as pdfjsLib from 'pdfjs-dist';
 import { classifyPage, linesToTextItems, renderPage } from '../ocr/pdfOcr.js';
-import { dropLinesInRegions, FURNITURE_LABELS } from '../ocr/layoutModel.js';
 import ocrService, { LAYOUT_MODEL_ID, OCR_MODEL_ID } from '../ocr/ocrService.js';
 import { DEFAULT_OPTIONS, UNCERTAIN_SCORE } from './options.js';
 import { buildPageTexts, ocrLineBox, regionBox, textItemBox } from './pageModel.js';
+import { createLayout } from './layoutRegions.js';
 
 const PDFJS_BASE = `/vendor/pdfjs-${pdfjsLib.version}/`;
 pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}pdf.worker.min.mjs`;
@@ -59,7 +59,7 @@ export async function capture(data, options = DEFAULT_OPTIONS, { onStatus, signa
                 view: page.view,
                 items,
                 boxes: items.filter(i => i.str.trim()).map(i => textItemBox(i, viewport)),
-                regions: null,
+                layout: null,
                 source: items.some(i => i.str.trim()) ? 'text' : 'leer',
                 scanReason: isScan ? reason : null,
             });
@@ -115,15 +115,20 @@ async function ocrPages(pdf, pages, scanned, options, { status, signal, notices 
             const image = await renderPage(page, OCR_DPI);
             page.cleanup();
             const { scale, view } = image;
-            let { lines, regions } = await ocrService.recognize(image, useLayout);
+            const { lines, regions } = await ocrService.recognize(image, useLayout);
             const target = pages[n - 1];
+            const items = linesToTextItems(lines, scale, view);
+            const boxes = lines.map(l => ocrLineBox(l, scale));
             if (useLayout && regions) {
-                target.regions = regions.map(r => regionBox(r, scale));
-                lines = dropLinesInRegions(lines, regions, FURNITURE_LABELS);
+                // Alle Zeilen bleiben erhalten und kennen ihren Bereich: Kopfzeilen & Co. sind nur
+                // ausgeschaltet und lassen sich in der Prüfansicht wieder einschalten
+                const { layout, lineRegions } = createLayout(regions.map(r => regionBox(r, scale)), boxes);
+                lineRegions.forEach((id, i) => { items[i].region = id; boxes[i].region = id; });
+                target.layout = layout;
             }
-            target.items = linesToTextItems(lines, scale, view);
+            target.items = items;
             target.view = view;
-            target.boxes = lines.map(l => ocrLineBox(l, scale));
+            target.boxes = boxes;
             target.source = useLayout ? 'ocr-layout' : 'ocr';
         } catch (err) {
             console.error(`Texterkennung auf Seite ${n} fehlgeschlagen:`, err);

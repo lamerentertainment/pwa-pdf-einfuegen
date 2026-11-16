@@ -76,3 +76,32 @@ describe('joinPages', () => {
         expect(joinPages(pages, { pageMarkers: true })).toBe('--- Seite 1 ---\n\nEins\n\n--- Seite 2 ---\n\n--- Seite 3 ---\n\nDrei');
     });
 });
+
+describe('buildPageTexts mit Layoutbereichen', () => {
+    const view = [0, 0, 595, 842];
+    const line = (str, y, region) => ({ ...item(str, 72, y), region });
+    const layoutPage = (number, regions, order, lines) => ({ number, view, items: lines, layout: { regions, order } });
+
+    it('baut Seiten aus eingeschalteten Bereichen in Reihenfolge auf, Seiten ohne Layout wie bisher', () => {
+        const pages = [
+            layoutPage(1,
+                [{ id: 'h', label: 'header', enabled: false }, { id: 'a', label: 'text', enabled: true }, { id: 'b', label: 'text', enabled: true }],
+                ['h', 'b', 'a'],
+                [line('Kopfzeile', 800, 'h'), line('Absatz A.', 700, 'a'), line('Absatz B.', 600, 'b')]),
+            { number: 2, view, items: [item('Digitale Seite.', 72, 700)] },
+        ];
+        expect(buildPageTexts(pages, DEFAULT_OPTIONS)).toEqual(['Absatz B.\n\nAbsatz A.', 'Digitale Seite.']);
+        pages[0].layout.regions[0].enabled = true;
+        expect(buildPageTexts(pages, DEFAULT_OPTIONS)[0]).toBe('Kopfzeile\n\nAbsatz B.\n\nAbsatz A.');
+    });
+
+    it('verbindet Bereiche über die Seitengrenze', () => {
+        const pages = [
+            layoutPage(1, [{ id: 'a', label: 'text', enabled: true }], ['a'], [line('Ein Satz über die Seiten-', 100, 'a')]),
+            layoutPage(2, [{ id: 'b', label: 'text', enabled: true }, { id: 'c', label: 'text', enabled: true }], ['b', 'c'],
+                [line('grenze hinweg.', 750, 'b'), line('Weiter.', 700, 'c')]),
+        ];
+        const groups = [{ id: 'g', members: [{ page: 1, id: 'a' }, { page: 2, id: 'b' }] }];
+        expect(buildPageTexts(pages, DEFAULT_OPTIONS, groups)).toEqual(['Ein Satz über die Seitengrenze hinweg.', 'Weiter.']);
+    });
+});

@@ -2,7 +2,8 @@
 //
 // Koordinaten der Boxen: Seite bei Massstab 1 (PDF-Punkte), Ursprung oben links, Drehung der
 // Seite schon angewendet – so können sie direkt über die gerenderte Seite gelegt werden.
-import { reconstructDocumentText } from './pdfLayout.js';
+import { reconstructDocumentText, reconstructPageText } from './pdfLayout.js';
+import { layoutPageText } from './layoutRegions.js';
 import { UNCERTAIN_SCORE } from './options.js';
 
 // Seitentrenner, die nur intern zum Aufteilen des Gesamttexts dienen
@@ -51,18 +52,37 @@ export function splitPages(text, count) {
     return pages;
 }
 
-/** Text der Seiten in Lesereihenfolge, mit Kopf-/Fusszeilen-Erkennung über das ganze Dokument. */
-export function buildPageTexts(pages, options) {
-    const layoutOptions = {
+export function layoutOptionsOf(options) {
+    return {
         keepLineNumbers: options.keepLineNumbers,
         uncertainBelow: options.markUncertain ? UNCERTAIN_SCORE : undefined,
         structure: options.structure,
         tables: options.tables,
     };
-    const input = pages.map(p => ({ items: p.items, view: p.view }));
-    const text = reconstructDocumentText(input, { ...layoutOptions, pageMarkers: true, pageLabel: SPLIT_LABEL });
-    return splitPages(text, pages.length)
-        // Rückfall, falls ein Dokument selbst eine solche Zeile enthält: Seite für Seite
-        ?? input.map(page => reconstructDocumentText([page], layoutOptions));
 }
 
+/** Text eines Layoutbereichs: nur seine Zeilen, mit dem üblichen Textaufbau. */
+export function regionText(page, regionId, layoutOptions) {
+    return reconstructPageText(page.items.filter(item => item.region === regionId), layoutOptions);
+}
+
+/**
+ * Text der Seiten in Lesereihenfolge, mit Kopf-/Fusszeilen-Erkennung über das ganze Dokument.
+ * Seiten mit Layoutbereichen werden aus ihren eingeschalteten Bereichen aufgebaut (Reihenfolge
+ * und Verbindungen siehe layoutRegions.js); sie nehmen an der Kopfzeilen-Erkennung nicht teil,
+ * dafür sind die Bereiche des Layoutmodells da.
+ * @param {Array<{layout: {groups: Array}}>} [groups] verbundene Bereiche
+ */
+export function buildPageTexts(pages, options, groups = []) {
+    const layoutOptions = layoutOptionsOf(options);
+    const input = pages.map(p => ({ items: p.layout ? [] : p.items, view: p.view }));
+    const text = reconstructDocumentText(input, { ...layoutOptions, pageMarkers: true, pageLabel: SPLIT_LABEL });
+    const base = splitPages(text, pages.length)
+        // Rückfall, falls ein Dokument selbst eine solche Zeile enthält: Seite für Seite
+        ?? input.map(page => reconstructDocumentText([page], layoutOptions));
+    if (!pages.some(p => p.layout)) return base;
+    const byNumber = new Map(pages.map(p => [p.number, p]));
+    const textOf = (n, id) => regionText(byNumber.get(n), id, layoutOptions);
+    const combinedOf = (n, ids) => reconstructPageText(byNumber.get(n).items.filter(item => ids.includes(item.region)), layoutOptions);
+    return base.map((t, i) => (pages[i].layout ? layoutPageText(pages[i].number, n => byNumber.get(n), groups, textOf, combinedOf) : t));
+}

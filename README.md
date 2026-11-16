@@ -12,6 +12,11 @@ Die App ist Open Source, damit jede und jeder nachprüfen kann, was sie tut.
    PDF-Seite und erfasster Text nebeneinander: Ein Klick auf eine Zeile im PDF markiert sie im
    Text und umgekehrt, unsicher erkannte Zeilen sind hervorgehoben, der Text lässt sich direkt
    korrigieren, kopieren oder als .txt speichern. Das Dokument lebt nur im Arbeitsspeicher.
+   Mit Layoutmodell lassen sich unter «Bereiche bearbeiten» die erkannten Bereiche nachträglich
+   bearbeiten, ohne neue Texterkennung: einzeln (Klick im PDF) oder nach Typ für das ganze Dokument
+   ein- und ausschalten, die Lesereihenfolge ändern (Pfeile oder «Reihenfolge per Klick»), Bereiche
+   über Seitengrenzen zu einem Absatz verbinden oder nebeneinanderliegende Bereiche (Bezeichnung und
+   Wert eines Formulars) zusammenlegen ([`src/capture/layoutRegions.js`](src/capture/layoutRegions.js)).
 2. **Verarbeiten** – regelbasiert, ohne Modell: Zeilen zusammenfügen, Worttrennungen und typische
    OCR-Fehler korrigieren, Umwandlung in indirekte Rede («Ich bin unschuldig» → «Er sei unschuldig»).
    Regeln und Wortlisten stammen aus «PDF einfügen» ([`src/process/rules.js`](src/process/rules.js),
