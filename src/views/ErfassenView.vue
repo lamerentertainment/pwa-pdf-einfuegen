@@ -203,14 +203,14 @@ function noticeText(notice) {
                 >
                   <label class="flex items-center gap-2">
                     <input v-model="documentState.options.headings" type="checkbox" class="checkbox checkbox-sm" :disabled="!isEffective(model)" />
-                    Überschriften mit # kennzeichnen
+                    Überschriften als Markdown (#) formatieren
                   </label>
                   <label class="flex items-center gap-2">
                     Fussnoten
                     <select v-model="documentState.options.footnotes" class="select select-xs w-auto" :disabled="!isEffective(model)" aria-label="Fussnoten">
-                      <option value="seite">an ihrer Stelle</option>
-                      <option value="dokument">ans Dokumentende</option>
-                      <option value="markdown">als Markdown-Fussnoten [^1]</option>
+                      <option value="seite">an ihrer Stelle belassen</option>
+                      <option value="dokument">ans Dokumentende setzen</option>
+                      <option value="markdown">als Markdown-Fussnoten [^1] ans Dokumentende setzen</option>
                     </select>
                   </label>
                   <label class="flex items-center gap-2">
@@ -242,13 +242,13 @@ function noticeText(notice) {
               <label class="flex items-center gap-2">
                 <input v-model="documentState.options.tables" type="checkbox" class="checkbox checkbox-sm" />
                 <span>
-                  Tabellen erkennen
+                  Tabellen als Markdown formatieren
                   <span class="text-xs opacity-70">{{ documentState.options.layout ? '(Scans: in den Tabellenbereichen des Layoutmodells, ab 2 Spalten; sonst ab 3 Spalten)' : '(ab 3 Spalten)' }}</span>
                 </span>
               </label>
               <label class="flex items-center gap-2">
                 <input v-model="documentState.options.lists" type="checkbox" class="checkbox checkbox-sm" />
-                Aufzählungen als Markdown-Listen
+                Aufzählungen als Markdown (-) formatieren
               </label>
               <label class="flex items-center gap-2">
                 <input v-model="documentState.options.keepLineNumbers" type="checkbox" class="checkbox checkbox-sm" />

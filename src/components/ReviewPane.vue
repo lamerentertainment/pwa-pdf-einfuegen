@@ -34,7 +34,7 @@ const textarea = ref(null);
 const splitBox = ref(null);
 const layout = useResizable('pruefansicht', { ratio: 0.5 });
 
-// Darstellung rechts: bearbeitbarer Text oder Tabellenansicht (gerendertes Markdown: Tabellen mit
+// Darstellung rechts: bearbeitbarer Text oder formatierte Ansicht (gerendertes Markdown: Tabellen mit
 // Linien, Listen, Überschriften)
 const view = usePreference('pruefansicht.ansicht', 'text');
 const wrapLines = usePreference('pruefansicht.umbruch', true);
@@ -64,7 +64,7 @@ function cancelRelayout() {
     confirmRelayout.value = false;
 }
 
-// Die Tabellenansicht schaltet die Tabellenerkennung selbst ein, auf Seiten mit Layoutmodell auch
+// Die formatierte Ansicht schaltet die Tabellenerkennung selbst ein, auf Seiten mit Layoutmodell auch
 // die Überschriften. Gibt es Bearbeitungen, die beim Neuaufbau verloren gingen, fragt sie vorher
 // nach (tablesPending).
 const tablesPending = ref(false);
@@ -381,7 +381,7 @@ function reset() {
     <div class="flex flex-wrap items-start gap-x-5 gap-y-2 text-sm">
       <div class="join" role="radiogroup" aria-label="Darstellung des Texts">
         <button class="btn btn-xs join-item" :class="{ 'btn-primary': view === 'text' }" role="radio" :aria-checked="view === 'text'" @click="view = 'text'">Text</button>
-        <button class="btn btn-xs join-item" :class="{ 'btn-primary': view === 'markdown' }" role="radio" :aria-checked="view === 'markdown'" @click="view = 'markdown'">Tabellenansicht</button>
+        <button class="btn btn-xs join-item" :class="{ 'btn-primary': view === 'markdown' }" role="radio" :aria-checked="view === 'markdown'" title="Zeigt das Markdown formatiert an: Tabellen, Überschriften und Listen" @click="view = 'markdown'">Formatiert</button>
       </div>
       <label v-if="view === 'text'" class="flex items-center gap-2">
         <input v-model="wrapLines" type="checkbox" class="checkbox checkbox-xs" /> Zeilen umbrechen
@@ -423,8 +423,8 @@ function reset() {
       <details @toggle="event => event.target.open || cancelRelayout()">
         <summary class="cursor-pointer select-none">Textaufbau anpassen</summary>
         <div class="mt-2 flex flex-col gap-1.5 rounded-box border border-base-300 bg-base-100 p-3">
-          <label class="flex items-center gap-2"><input v-model="draft.tables" type="checkbox" class="checkbox checkbox-xs" /> Tabellen als Markdown-Tabellen</label>
-          <label class="flex items-center gap-2"><input v-model="draft.lists" type="checkbox" class="checkbox checkbox-xs" /> Aufzählungen als Markdown-Listen</label>
+          <label class="flex items-center gap-2"><input v-model="draft.tables" type="checkbox" class="checkbox checkbox-xs" /> Tabellen als Markdown formatieren</label>
+          <label class="flex items-center gap-2"><input v-model="draft.lists" type="checkbox" class="checkbox checkbox-xs" /> Aufzählungen als Markdown (-) formatieren</label>
           <label class="flex items-center gap-2"><input v-model="draft.structure" type="checkbox" class="checkbox checkbox-xs" /> Einrückungen und Spalten-Text erhalten</label>
           <label class="flex items-center gap-2"><input v-model="draft.keepLineNumbers" type="checkbox" class="checkbox checkbox-xs" /> Zeilennummern am Rand behalten</label>
           <label class="flex items-center gap-2" :class="{ 'opacity-50': !hasOcr }" :title="hasOcr ? 'Wirkt nur auf Seiten aus der Texterkennung' : 'Keine Seite dieses Dokuments stammt aus der Texterkennung'">
@@ -433,13 +433,13 @@ function reset() {
           </label>
           <template v-if="hasLayout">
             <p class="mt-1 text-xs font-semibold uppercase tracking-wide opacity-60">Seiten mit Layoutmodell</p>
-            <label class="flex items-center gap-2"><input v-model="draft.headings" type="checkbox" class="checkbox checkbox-xs" /> Überschriften mit # kennzeichnen</label>
+            <label class="flex items-center gap-2"><input v-model="draft.headings" type="checkbox" class="checkbox checkbox-xs" /> Überschriften als Markdown (#) formatieren</label>
             <label class="flex items-center gap-2">
               Fussnoten
               <select v-model="draft.footnotes" class="select select-xs w-auto" aria-label="Fussnoten">
-                <option value="seite">an ihrer Stelle</option>
-                <option value="dokument">ans Dokumentende</option>
-                <option value="markdown">als Markdown-Fussnoten [^1]</option>
+                <option value="seite">an ihrer Stelle belassen</option>
+                <option value="dokument">ans Dokumentende setzen</option>
+                <option value="markdown">als Markdown-Fussnoten [^1] ans Dokumentende setzen</option>
               </select>
             </label>
             <label class="flex items-center gap-2"><input v-model="draft.placeholders" type="checkbox" class="checkbox checkbox-xs" /> Platzhalter für Bilder (mit Bildunterschrift) und Stempel</label>
@@ -529,7 +529,7 @@ function reset() {
           <div
             class="markdown min-h-0 flex-1 overflow-auto rounded-field border border-base-300 bg-base-100 p-4 text-sm"
             data-testid="markdown"
-            :aria-label="`Seite ${page.number} in der Tabellenansicht`"
+            :aria-label="`Seite ${page.number} in der formatierten Ansicht`"
             v-html="rendered"
           />
           <p v-if="documentState.options.tables && !pageHasTable" class="text-xs opacity-60">Auf dieser Seite wurde keine Tabelle erkannt.</p>
