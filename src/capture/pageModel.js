@@ -167,7 +167,7 @@ export function markFootnoteReference(text, number, label) {
  */
 function regionOptions(page, regionIds, layoutOptions) {
     const isTable = page.layout?.regions.some(r => regionIds.includes(r.id) && r.label === 'table');
-    return { ...layoutOptions, tables: Boolean(layoutOptions.tables && isTable), tableRegion: Boolean(isTable) };
+    return { ...layoutOptions, tables: Boolean(layoutOptions.tables && isTable), tableRegion: Boolean(isTable), bullets: page.bullets };
 }
 
 /**
@@ -191,8 +191,8 @@ export function regionText(page, regionId, layoutOptions) {
  */
 export function buildPageTexts(pages, options, groups = []) {
     const layoutOptions = layoutOptionsOf(options);
-    // Gezeichnete Aufzählungszeichen (bullets.js) vorerst nur auf Seiten mit eingebettetem Text
-    const input = pages.map(p => ({ items: p.layout ? [] : p.items, view: p.view, bullets: p.source === 'text' ? p.bullets : undefined }));
+    // Aufzählungszeichen: gezeichnete (bullets.js) bzw. im Bild gefundene (bulletBlobs.js)
+    const input = pages.map(p => ({ items: p.layout ? [] : p.items, view: p.view, bullets: p.bullets }));
     const text = reconstructDocumentText(input, { ...layoutOptions, pageMarkers: true, pageLabel: SPLIT_LABEL });
     const base = splitPages(text, pages.length)
         // Rückfall, falls ein Dokument selbst eine solche Zeile enthält: Seite für Seite

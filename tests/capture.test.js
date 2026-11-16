@@ -78,11 +78,17 @@ describe('Aufzählungen', () => {
         bullets: [{ x: 80, y: 703, w: 4, h: 4 }, { x: 100, y: 688, w: 4, h: 4 }],
     });
 
-    it('setzt gezeichnete Punkte nur mit der Einstellung und nur auf digitalen Seiten', () => {
+    it('setzt die Punkte einer Seite nur mit der Einstellung, ob eingebettet oder erkannt', () => {
         const lists = { ...DEFAULT_OPTIONS, lists: true };
         expect(buildPageTexts([page('text')], lists)[0]).toBe('- Einkommen\n  - abzüglich Steuern');
+        expect(buildPageTexts([page('ocr')], lists)[0]).toBe('- Einkommen\n  - abzüglich Steuern');
         expect(buildPageTexts([page('text')], DEFAULT_OPTIONS)[0]).not.toContain('-');
-        expect(buildPageTexts([page('ocr')], lists)[0]).not.toContain('-');
+    });
+
+    it('setzt sie auch in Bereichen des Layoutmodells', () => {
+        const p = { ...page('ocr-layout'), layout: { regions: [{ id: 'a', label: 'text', enabled: true }], order: ['a'] } };
+        p.items = p.items.map(i => ({ ...i, region: 'a' }));
+        expect(buildPageTexts([p], { ...DEFAULT_OPTIONS, lists: true })[0]).toBe('- Einkommen\n  - abzüglich Steuern');
     });
 });
 

@@ -11,6 +11,7 @@ import { DEFAULT_OPTIONS, UNCERTAIN_SCORE } from './options.js';
 import { buildPageTexts, ocrLineBox, regionBox, textItemBox } from './pageModel.js';
 import { createLayout } from './layoutRegions.js';
 import { findBulletShapes } from './bullets.js';
+import { findBulletBlobs } from '../ocr/bulletBlobs.js';
 
 const PDFJS_BASE = `/vendor/pdfjs-${pdfjsLib.version}/`;
 pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}pdf.worker.min.mjs`;
@@ -129,6 +130,11 @@ async function ocrPage(pdf, target, useLayout, dpi = OCR_DPI) {
     const { scale, view } = image;
     const { lines, regions } = await ocrService.recognize(image, useLayout);
     const items = linesToTextItems(lines, scale, view);
+    // Aufzählungszeichen im Bild suchen: Die Texterkennung liest sie unzuverlässig (bulletBlobs.js).
+    // Sie ersetzen die gezeichneten der Seite – auf dem Bild sind auch diese zu sehen.
+    const bullets = findBulletBlobs(image, lines).map(b => ({
+        ...b, x: view[0] + b.x / scale, y: view[3] - (b.y + b.h) / scale, w: b.w / scale, h: b.h / scale,
+    }));
     const boxes = lines.map(l => ocrLineBox(l, scale));
     target.layout = null;
     if (useLayout && regions) {
@@ -139,6 +145,7 @@ async function ocrPage(pdf, target, useLayout, dpi = OCR_DPI) {
         target.layout = layout;
     }
     target.items = items;
+    target.bullets = bullets;
     target.view = view;
     target.boxes = boxes;
     target.source = useLayout ? 'ocr-layout' : 'ocr';

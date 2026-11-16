@@ -443,4 +443,39 @@ describe('lists', () => {
         ], { lists: true, bullets: [bulletAt(90, 700), bulletAt(70, 500)] });
         expect(text).toBe('- Oben eingerückt\n\n- Unten');
     });
+
+    describe('nach der Texterkennung', () => {
+        // Eine erkannte Zeile beginnt beim Punkt, gelesen als «•», «o» oder gar nicht
+        const ocrLine = (str, x, y) => ({ str, width: str.length * 5, height: 10, transform: [1, 0, 0, 1, x, y] });
+        const dot = (x, y) => ({ x, y: y + 3, w: 4, h: 4 });
+
+        it('entfernt das falsch gelesene Zeichen und behält den Text', () => {
+            const text = reconstructPageText([
+                ocrLine('•Einkommen netto', 50, 700),
+                ocrLine('o abzüglich Steuern', 70, 685),
+                ocrLine('abzüglich Unterhalt', 70, 670),
+                ocrLine('e Tagessatz', 50, 655),
+            ], { lists: true, bullets: [dot(50, 700), dot(70, 685), dot(70, 670), dot(50, 655)] });
+            expect(text).toBe('- Einkommen netto\n  - abzüglich Steuern\n  - abzüglich Unterhalt\n- Tagessatz');
+        });
+
+        it('nimmt einen als eigene Zeile gelesenen Punkt als Aufzählungszeichen', () => {
+            const text = reconstructPageText([ocrLine('·', 50, 700), ocrLine('Erster Punkt', 62, 700)],
+                { lists: true, bullets: [dot(50, 700)] });
+            expect(text).toBe('- Erster Punkt');
+        });
+
+        it('lässt Wörter am Zeilenanfang stehen', () => {
+            const text = reconstructPageText([ocrLine('ob er kam', 50, 700), ocrLine('Er sagte', 50, 685)],
+                { lists: true, bullets: [dot(50, 700), dot(50, 685)] });
+            expect(text).toBe('- ob er kam\n- Er sagte');
+        });
+
+        it('braucht für Striche aus dem Bild mehrere untereinander', () => {
+            const bar = (x, y) => ({ x, y: y + 4, w: 4, h: 1, dash: true });
+            const items = [ocrLine('Erstens', 60, 700), ocrLine('Zweitens', 60, 685)];
+            expect(reconstructPageText(items, { lists: true, bullets: [bar(50, 700), bar(50, 685)] })).toBe('- Erstens\n- Zweitens');
+            expect(reconstructPageText(items, { lists: true, bullets: [bar(50, 700)] })).toBe('Erstens\nZweitens');
+        });
+    });
 });

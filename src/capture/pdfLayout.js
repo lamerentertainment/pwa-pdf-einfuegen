@@ -36,10 +36,11 @@ function buildContext(boxes) {
     const medianH = sortedH[Math.floor(sortedH.length / 2)] || 12;
 
     // Average char width for gap classification; inserted list markers span up to their text and
-    // would skew it
+    // would skew it; rewritten bullets count as the box they replace (`measureW`, `chars`)
     const measured = boxes.filter(b => !b.synthetic);
     const avgCharW = measured.reduce((sum, b) => {
-        return sum + (b.str.length > 0 ? b.w / b.str.length : 0);
+        const chars = b.chars ?? b.str.length;
+        return sum + (chars > 0 ? (b.measureW ?? b.w) / chars : 0);
     }, 0) / measured.length || 7;
 
     return {
@@ -196,6 +197,9 @@ const BULLET_CHARS = '•●○◦▪■□‣⁃∙·';
 const DASHES = '–—-'; // hyphen last: literal in a character class
 const BULLET_ONLY_RE = new RegExp(`^[${BULLET_CHARS}${DASHES}]$`);
 const BULLET_PREFIX_RE = new RegExp(`^\\s*[${BULLET_CHARS}${DASHES}]\\s+(?=\\S)`);
+// What OCR makes of a bullet at the start of a line: bullet-like characters (also glued to the
+// word), or one character of a kind that is no word on its own, followed by a space
+const MISREAD_BULLET_RE = new RegExp(`^\\s*(?:[${BULLET_CHARS}°*]+\\s*|[oOeе0+.,:;${DASHES}]\\s+(?=\\S)|[${BULLET_CHARS}°*oOeе0+.,:;${DASHES}]\\s*$)`);
 // A new list starts after this many line heights without a bullet
 const LIST_BREAK_LINES = 6;
 
@@ -211,15 +215,32 @@ function markListItems(boxes, bullets) {
 
     const markers = [];
     const replaced = new Map();
-    // Bullets drawn as shapes: the nearest text starting right of it, at its height
+    // Bullets drawn as shapes (or found in the page image after OCR): the nearest text starting
+    // right of it, at its height. An OCR line often starts at the bullet itself and reads it as
+    // "•", "o", "e" or not at all: then that line is the item and the misread bullet goes.
     for (const bullet of bullets) {
         const cy = bullet.y + bullet.h / 2;
-        const text = boxes
-            .filter(b => cy >= b.y - b.h * 0.1 && cy <= b.y + b.h * 0.8)
-            .filter(b => b.x >= bullet.x + bullet.w && b.x - (bullet.x + bullet.w) <= 3 * b.h)
+        const right = bullet.x + bullet.w;
+        const atHeight = boxes.filter(b => cy >= b.y - b.h * 0.1 && cy <= b.y + b.h * 0.8);
+        const host = atHeight.find(b => b.x < right && b.x + b.w > bullet.x);
+        if (host) {
+            if (!firstOnLine(host) || markers.some(m => sameLine(m, host))) continue;
+            const rest = host.str.replace(MISREAD_BULLET_RE, '');
+            const text = rest.trim() ? null : nextOnLine(host);
+            if (!rest.trim() && !text) continue;
+            // The bullet read as a box of its own: the marker spans to the text after it
+            const marker = text
+                ? { ...markerBox(bullet.x, text, bullet.dash), synthetic: false, measureW: host.w, chars: host.str.length }
+                : { ...host, str: `- ${rest.trimStart()}`, chars: host.str.length, dash: Boolean(bullet.dash) };
+            replaced.set(host, marker);
+            markers.push(marker);
+            continue;
+        }
+        const text = atHeight
+            .filter(b => b.x >= right && b.x - right <= 3 * b.h)
             .reduce((best, b) => (!best || b.x < best.x ? b : best), null);
         if (!text || !firstOnLine(text) || markers.some(m => sameLine(m, text))) continue;
-        markers.push(markerBox(bullet.x, text));
+        markers.push(markerBox(bullet.x, text, bullet.dash));
     }
     // Bullets in the text
     for (const box of boxes) {
@@ -229,11 +250,11 @@ function markListItems(boxes, bullets) {
         if (BULLET_ONLY_RE.test(str)) {
             const text = nextOnLine(box);
             if (!text || text.x - (box.x + box.w) > 6 * avgCharW) continue;
-            const marker = markerBox(box.x, text, dash);
+            const marker = { ...markerBox(box.x, text, dash), synthetic: false, measureW: box.w, chars: box.str.length };
             replaced.set(box, marker);
             markers.push(marker);
         } else if (BULLET_PREFIX_RE.test(box.str)) {
-            const marker = { ...box, str: `- ${box.str.replace(BULLET_PREFIX_RE, '')}`, dash };
+            const marker = { ...box, str: `- ${box.str.replace(BULLET_PREFIX_RE, '')}`, chars: box.str.length, dash };
             replaced.set(box, marker);
             markers.push(marker);
         }
