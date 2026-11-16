@@ -4,14 +4,16 @@
 defineProps({
     model: { type: Object, required: true },
     compact: { type: Boolean, default: false },
+    // ohne eigene Überschrift, wenn sie schon im aufklappbaren Titel steht
+    bare: { type: Boolean, default: false },
 });
 </script>
 
 <template>
   <div class="space-y-2 text-sm">
     <div>
-      <p class="text-xs font-semibold uppercase tracking-wide opacity-60">Was es kann</p>
-      <ul class="mt-1 list-disc space-y-0.5 pl-5">
+      <p v-if="!bare" class="text-xs font-semibold uppercase tracking-wide opacity-60">Was es kann</p>
+      <ul class="list-disc space-y-0.5 pl-5" :class="{ 'mt-1': !bare }">
         <li v-for="(capability, i) in model.capabilities" :key="i">{{ capability }}</li>
       </ul>
     </div>

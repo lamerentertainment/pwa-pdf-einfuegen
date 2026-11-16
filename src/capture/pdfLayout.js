@@ -551,9 +551,12 @@ function classifyRun(run, gutters, ctx, options) {
 
     const median = values => values.sort((a, b) => a - b)[Math.floor(values.length / 2)] || 0;
     const columnLengths = Array.from({ length: columns }, (_, c) => median(grid.map(r => r[c].length).filter(Boolean)));
-    if (run.length >= MIN_PROSE_LINES && columnLengths.every(n => n >= PROSE_CHARS)) return null;
+    // In einem Tabellenbereich des Layoutmodells ist die Tabelle gesichert: schon ab 2 Spalten
+    // und auch mit langen Zellen; sonst erst ab 3 Spalten, damit Fliesstext keine Tabelle wird
+    const { tableRegion } = options;
+    if (!tableRegion && run.length >= MIN_PROSE_LINES && columnLengths.every(n => n >= PROSE_CHARS)) return null;
 
-    const isTable = columns >= 3 && filled >= 2
+    const isTable = columns >= (tableRegion ? 2 : 3) && filled >= 2
         && Array.from({ length: columns }, (_, c) => grid.filter(r => r[c]).length).every(n => n >= 2);
 
     if (isTable && options.tables) return { kind: 'table', lines: run, grid };

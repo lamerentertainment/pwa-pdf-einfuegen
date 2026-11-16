@@ -104,4 +104,19 @@ describe('buildPageTexts mit Layoutbereichen', () => {
         const groups = [{ id: 'g', members: [{ page: 1, id: 'a' }, { page: 2, id: 'b' }] }];
         expect(buildPageTexts(pages, DEFAULT_OPTIONS, groups)).toEqual(['Ein Satz über die Seitengrenze hinweg.', 'Weiter.']);
     });
+
+    it('baut Tabellen nur in Tabellenbereichen auf, dort schon ab 2 Spalten', () => {
+        const cell = (str, x, y, region) => ({ ...item(str, x, y), region });
+        const rows = region => [
+            cell('Datum', 72, 700, region), cell('Betrag', 300, 700, region),
+            cell('01.02.2024', 72, 685, region), cell('120.00', 300, 685, region),
+            cell('15.03.2024', 72, 670, region), cell('80.50', 300, 670, region),
+        ];
+        const options = { ...DEFAULT_OPTIONS, tables: true };
+        const asTable = layoutPage(1, [{ id: 't', label: 'table', enabled: true }], ['t'], rows('t'));
+        const asText = layoutPage(1, [{ id: 'x', label: 'text', enabled: true }], ['x'], rows('x'));
+        expect(buildPageTexts([asTable], options)[0]).toMatch(/^\| Datum \| Betrag \|\n\| --- \| --- \|/);
+        expect(buildPageTexts([asText], options)[0]).not.toContain('|');
+        expect(buildPageTexts([asTable], DEFAULT_OPTIONS)[0]).not.toContain('|');
+    });
 });

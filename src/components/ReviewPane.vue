@@ -19,7 +19,7 @@ const SOURCE_LABEL = {
     leer: { text: 'Kein Text auf der Seite', cls: 'badge-ghost' },
     ocr: { text: 'Texterkennung (OCR)', cls: 'badge-success' },
     'ocr-layout': { text: 'Texterkennung mit Layoutmodell', cls: 'badge-success' },
-    'ocr-fehlt': { text: 'Scan – Texterkennung nicht installiert', cls: 'badge-warning' },
+    'ocr-fehlt': { text: 'Scan – ohne Texterkennung', cls: 'badge-warning' },
     'text-ocr-fehlt': { text: 'Scan – nur verborgene Textebene des Scanners', cls: 'badge-warning' },
 };
 

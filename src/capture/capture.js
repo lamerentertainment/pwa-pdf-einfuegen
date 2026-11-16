@@ -86,9 +86,10 @@ export async function capture(data, options = DEFAULT_OPTIONS, { onStatus, signa
 }
 
 async function ocrPages(pdf, pages, scanned, options, { status, signal, notices }) {
-    if (!(await ocrService.isInstalled(OCR_MODEL_ID))) {
+    const off = options.ocr === false;
+    if (off || !(await ocrService.isInstalled(OCR_MODEL_ID))) {
         for (const n of scanned) pages[n - 1].source = pages[n - 1].source === 'leer' ? 'ocr-fehlt' : 'text-ocr-fehlt';
-        notices.push({ type: 'model-missing', count: scanned.length });
+        notices.push({ type: off ? 'ocr-off' : 'model-missing', count: scanned.length });
         return;
     }
     status('Texterkennung wird gestartet …', 0.2);

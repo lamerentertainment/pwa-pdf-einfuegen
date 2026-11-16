@@ -5,9 +5,10 @@
 export const UNCERTAIN_SCORE = 0.8;
 
 export const DEFAULT_OPTIONS = Object.freeze({
-    layout: false, // Layoutmodell verwenden (nur wenn installiert)
+    ocr: true, // Texterkennung für gescannte Seiten (nur wenn installiert)
+    layout: false, // Layoutmodell verwenden (nur wenn installiert, braucht die Texterkennung)
     markUncertain: false, // unsichere OCR-Zeilen im Text mit [?] markieren
     keepLineNumbers: false, // Zeilennummern am Rand behalten
     structure: true, // Einrückungen und nebeneinanderstehenden Text erhalten
-    tables: false, // Tabellen als Markdown
+    tables: false, // Tabellen als Markdown (ohne Layoutmodell ab 3 Spalten, sonst in Tabellenbereichen)
 });

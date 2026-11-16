@@ -135,7 +135,7 @@ async function persist() {
           <span class="text-xs font-semibold uppercase tracking-wide opacity-60">Einstellung</span><br />
           <template v-if="model.stage === 3">In «3 · Transformieren» unter «Sprachmodell» wählbar, sobald es installiert ist.</template>
           <template v-else-if="model.option">
-            In «Erfassen» unter «Modelle und Einstellungen»: <strong>«Layoutmodell verwenden»</strong>.
+            In «Erfassen» unter «Modelle und Einstellungen»: Schalter <strong>«aktiviert»</strong> bei diesem Modell.
             <template v-if="model.requires"> Setzt die installierte {{ nameOf(model.requires) }} voraus.</template>
           </template>
           <template v-else>Keine – wird automatisch verwendet, sobald es installiert ist.</template>

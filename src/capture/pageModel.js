@@ -61,9 +61,19 @@ export function layoutOptionsOf(options) {
     };
 }
 
-/** Text eines Layoutbereichs: nur seine Zeilen, mit dem üblichen Textaufbau. */
+/**
+ * Tabellen auf Seiten mit Layoutmodell: nur in den Bereichen, die das Modell als Tabelle erkannt
+ * hat, dort aber schon ab 2 Spalten. Anderswo wird nichts zur Tabelle.
+ */
+function regionOptions(page, regionIds, layoutOptions) {
+    const isTable = page.layout?.regions.some(r => regionIds.includes(r.id) && r.label === 'table');
+    return { ...layoutOptions, tables: Boolean(layoutOptions.tables && isTable), tableRegion: Boolean(isTable) };
+}
+
+/** Text eines oder mehrerer Layoutbereiche: nur ihre Zeilen, mit dem üblichen Textaufbau. */
 export function regionText(page, regionId, layoutOptions) {
-    return reconstructPageText(page.items.filter(item => item.region === regionId), layoutOptions);
+    const ids = Array.isArray(regionId) ? regionId : [regionId];
+    return reconstructPageText(page.items.filter(item => ids.includes(item.region)), regionOptions(page, ids, layoutOptions));
 }
 
 /**
@@ -83,6 +93,6 @@ export function buildPageTexts(pages, options, groups = []) {
     if (!pages.some(p => p.layout)) return base;
     const byNumber = new Map(pages.map(p => [p.number, p]));
     const textOf = (n, id) => regionText(byNumber.get(n), id, layoutOptions);
-    const combinedOf = (n, ids) => reconstructPageText(byNumber.get(n).items.filter(item => ids.includes(item.region)), layoutOptions);
+    const combinedOf = (n, ids) => regionText(byNumber.get(n), ids, layoutOptions);
     return base.map((t, i) => (pages[i].layout ? layoutPageText(pages[i].number, n => byNumber.get(n), groups, textOf, combinedOf) : t));
 }

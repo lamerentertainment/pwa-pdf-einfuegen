@@ -17,6 +17,10 @@ Die App ist Open Source, damit jede und jeder nachprüfen kann, was sie tut.
    ein- und ausschalten, die Lesereihenfolge ändern (Pfeile oder «Reihenfolge per Klick»), Bereiche
    über Seitengrenzen zu einem Absatz verbinden oder nebeneinanderliegende Bereiche (Bezeichnung und
    Wert eines Formulars) zusammenlegen ([`src/capture/layoutRegions.js`](src/capture/layoutRegions.js)).
+   Tabellen entstehen auf solchen Seiten nur in den Bereichen, die das Modell als Tabelle erkennt,
+   dort aber schon ab 2 Spalten (ohne Layoutmodell: ab 3 Spalten). Beide Modelle lassen sich auf
+   der Startseite unabhängig von der Installation aktivieren und deaktivieren; der Browser merkt sich
+   die Wahl.
 2. **Verarbeiten** – regelbasiert, ohne Modell: Zeilen zusammenfügen, Worttrennungen und typische
    OCR-Fehler korrigieren, Umwandlung in indirekte Rede («Ich bin unschuldig» → «Er sei unschuldig»).
    Regeln und Wortlisten stammen aus «PDF einfügen» ([`src/process/rules.js`](src/process/rules.js),

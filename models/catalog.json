@@ -8,11 +8,11 @@
       "capabilities": [
         "Liest Text auf gescannten Seiten, auch bei leicht schief eingelegten Blättern; deckt Deutsch mit Umlauten und ß ab.",
         "Ersetzt die oft fehlerhafte Textebene von Scannern («lch» statt «Ich», «lhnen» statt «Ihnen»).",
-        "Gibt für jede Zeile an, wie sicher sie erkannt wurde; unsichere Zeilen markiert die Prüfansicht orange."
+        "Gibt für jede Zeile an, wie sicher sie erkannt wurde: Unsichere Zeilen markiert die Prüfansicht orange, auf Wunsch zusätzlich mit [?] im Text (Einstellung bei der Texterkennung)."
       ],
       "without": "Bei gescannten Seiten bleibt nur der Text, den der Scanner selbst eingebettet hat: oft fehlerhaft oder gar keiner. Digitale Seiten funktionieren ohne dieses Modell.",
-      "usage": "Wird beim Einlesen automatisch für alle gescannten Seiten verwendet, sobald es installiert ist.",
-      "option": null,
+      "usage": "Wird beim Einlesen für alle gescannten Seiten verwendet, solange es installiert und aktiviert ist.",
+      "option": "ocr",
       "stage": 1,
       "license": "Apache-2.0",
       "publisher": "PaddlePaddle",
@@ -47,11 +47,16 @@
       "purpose": "Erkennt den Aufbau gescannter Seiten. Optional.",
       "capabilities": [
         "Erkennt Bereiche wie Überschriften, Textblöcke, Tabellen, Fussnoten, Randnotizen, Stempel sowie Kopf- und Fusszeilen auf gescannten Seiten.",
-        "Kopf- und Fusszeilen sowie Seitenzahlen sind anfangs ausgeschaltet und fehlen im Text.",
-        "In der Prüfansicht unter «Bereiche bearbeiten» lassen sich Bereiche einzeln oder nach Typ ein- und ausschalten, umordnen, über Seiten verbinden und nebeneinander zusammenlegen."
+        "Liest die Bereiche in sinnvoller Reihenfolge: Spalten links vor rechts, innerhalb einer Spalte von oben nach unten.",
+        "Kopf- und Fusszeilen sowie Seitenzahlen sind anfangs ausgeschaltet. Verloren geht nichts: Sie lassen sich wieder einschalten.",
+        "Tabellen: Mit «Tabellen erkennen» (oder der Tabellenansicht) wird nur in den als Tabelle erkannten Bereichen eine Tabelle aufgebaut, dort aber schon ab 2 Spalten. Fliesstext wird so nicht versehentlich zur Tabelle.",
+        "In der Prüfansicht unter «Bereiche bearbeiten»: Bereiche per Klick im PDF ein- und ausschalten oder alle eines Typs auf einmal (z. B. alle Randnotizen).",
+        "Reihenfolge ändern: mit Pfeilen in der Liste oder indem man die Bereiche im PDF nacheinander anklickt.",
+        "Verbinden: Bereiche, auch über Seitengrenzen hinweg, zu einem Absatz zusammenfügen; am Seitenende getrennte Wörter werden wieder zusammengesetzt.",
+        "Nebeneinander zusammenlegen: getrennt erkannte Spalten eines Formulars (Bezeichnung und Wert) wieder auf eine Zeile bringen, z. B. «Name: Muster»."
       ],
       "without": "Kopf- und Fusszeilen, die sich auf mehreren Seiten wiederholen, werden trotzdem erkannt und weggelassen (anhand der Wiederholung, ohne Modell).",
-      "usage": "Wirkt nur zusammen mit der Texterkennung und nur auf gescannten Seiten, wenn «Layoutmodell verwenden» eingeschaltet ist. Braucht pro Seite etwa eine Sekunde zusätzlich.",
+      "usage": "Wirkt nur zusammen mit der Texterkennung und nur auf gescannten Seiten, wenn es aktiviert ist. Braucht pro Seite etwa eine Sekunde zusätzlich.",
       "option": "layout",
       "requires": "ppocr-v5-latin",
       "stage": 1,
