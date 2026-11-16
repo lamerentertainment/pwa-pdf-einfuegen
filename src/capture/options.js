@@ -11,4 +11,8 @@ export const DEFAULT_OPTIONS = Object.freeze({
     keepLineNumbers: false, // Zeilennummern am Rand behalten
     structure: true, // Einrückungen und nebeneinanderstehenden Text erhalten
     tables: false, // Tabellen als Markdown (ohne Layoutmodell ab 3 Spalten, sonst in Tabellenbereichen)
+    // Nur Seiten mit Layoutmodell:
+    headings: false, // Dokument- und Abschnittstitel als Markdown-Überschrift (# / ##)
+    footnotes: 'seite', // Fussnoten: 'seite' (wo sie stehen) oder 'dokument' (gesammelt am Ende)
+    placeholders: false, // [Abbildung], [Diagramm], [Stempel: …] statt Zeichensalat oder Lücke
 });

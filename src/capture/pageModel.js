@@ -58,8 +58,41 @@ export function layoutOptionsOf(options) {
         uncertainBelow: options.markUncertain ? UNCERTAIN_SCORE : undefined,
         structure: options.structure,
         tables: options.tables,
+        // Nur Seiten mit Layoutmodell (typeOutput)
+        headings: Boolean(options.headings),
+        footnotes: options.footnotes === 'dokument' ? 'dokument' : 'seite',
+        placeholders: Boolean(options.placeholders),
     };
 }
+
+/** Ein Bereich als eine Zeile (Titel, Stempeltext). */
+const oneLine = text => text.replace(/\s*\n\s*/g, ' ').trim();
+
+const PLACEHOLDER = { image: 'Abbildung', chart: 'Diagramm', seal: 'Stempel' };
+
+/**
+ * Ausgabe eines Bereichs nach seinem Typ (Etappe 2):
+ * - Dokumenttitel und Abschnittstitel als Markdown-Überschrift (# / ##), wenn «headings»
+ * - Bilder und Diagramme als [Abbildung] / [Diagramm], Stempel als [Stempel: Text], wenn
+ *   «placeholders» (die Texterkennung liest in Bildern meist nur Zeichensalat)
+ * - Fussnoten fehlen an ihrer Stelle, wenn sie ans Dokumentende kommen (footnotes: 'dokument')
+ * @param {string} label Bereichstyp
+ * @param {string} text Text des Bereichs (regionText)
+ */
+export function typeOutput(label, text, layoutOptions) {
+    if (layoutOptions.headings && text.trim()) {
+        if (label === 'doc_title') return `# ${oneLine(text)}`;
+        if (label === 'paragraph_title') return `## ${oneLine(text)}`;
+    }
+    if (layoutOptions.placeholders && PLACEHOLDER[label]) {
+        const inner = label === 'seal' ? oneLine(text) : '';
+        return `[${PLACEHOLDER[label]}${inner ? `: ${inner}` : ''}]`;
+    }
+    if (label === 'footnote' && layoutOptions.footnotes === 'dokument') return '';
+    return text;
+}
+
+export const FOOTNOTE_MARKER = '--- Fussnoten ---';
 
 /**
  * Tabellen auf Seiten mit Layoutmodell: nur in den Bereichen, die das Modell als Tabelle erkannt
@@ -92,7 +125,22 @@ export function buildPageTexts(pages, options, groups = []) {
         ?? input.map(page => reconstructDocumentText([page], layoutOptions));
     if (!pages.some(p => p.layout)) return base;
     const byNumber = new Map(pages.map(p => [p.number, p]));
-    const textOf = (n, id) => regionText(byNumber.get(n), id, layoutOptions);
+    const labelOf = (n, id) => byNumber.get(n).layout.regions.find(r => r.id === id)?.label;
+    const textOf = (n, id) => typeOutput(labelOf(n, id), regionText(byNumber.get(n), id, layoutOptions), layoutOptions);
     const combinedOf = (n, ids) => regionText(byNumber.get(n), ids, layoutOptions);
-    return base.map((t, i) => (pages[i].layout ? layoutPageText(pages[i].number, n => byNumber.get(n), groups, textOf, combinedOf) : t));
+    const texts = base.map((t, i) => (pages[i].layout ? layoutPageText(pages[i].number, n => byNumber.get(n), groups, textOf, combinedOf) : t));
+
+    // Fussnoten aller Seiten gesammelt ans Ende der letzten Seite, in Lesereihenfolge
+    if (layoutOptions.footnotes === 'dokument') {
+        const notes = pages.flatMap(p => (p.layout?.order ?? [])
+            .map(id => p.layout.regions.find(r => r.id === id))
+            .filter(r => r?.enabled && r.label === 'footnote')
+            .map(r => regionText(p, r.id, layoutOptions).trim())
+            .filter(Boolean));
+        if (notes.length) {
+            const last = texts.length - 1;
+            texts[last] = [texts[last].trim(), FOOTNOTE_MARKER, ...notes].filter(Boolean).join('\n\n');
+        }
+    }
+    return texts;
 }

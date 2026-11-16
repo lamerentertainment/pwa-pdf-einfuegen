@@ -40,7 +40,7 @@ const rendered = computed(() => (view.value === 'markdown' ? renderMarkdown(page
 const pageHasTable = computed(() => hasMarkdownTable(page.value.text));
 
 // Textaufbau nachträglich ändern – aus den erkannten Zeilen, ohne neue Texterkennung
-const LAYOUT_KEYS = ['tables', 'structure', 'keepLineNumbers', 'markUncertain'];
+const LAYOUT_KEYS = ['tables', 'structure', 'keepLineNumbers', 'markUncertain', 'headings', 'footnotes', 'placeholders'];
 const draft = reactive(Object.fromEntries(LAYOUT_KEYS.map(key => [key, documentState.options[key]])));
 const draftChanged = computed(() => LAYOUT_KEYS.some(key => draft[key] !== documentState.options[key]));
 const anyEdited = computed(() => documentState.pages.some(p => p.text !== p.originalText));
@@ -60,24 +60,28 @@ function cancelRelayout() {
     confirmRelayout.value = false;
 }
 
-// Die Tabellenansicht schaltet die Tabellenerkennung selbst ein. Gibt es Bearbeitungen, die beim
-// Neuaufbau verloren gingen, fragt sie vorher nach (tablesPending).
+// Die Tabellenansicht schaltet die Tabellenerkennung selbst ein, auf Seiten mit Layoutmodell auch
+// die Überschriften. Gibt es Bearbeitungen, die beim Neuaufbau verloren gingen, fragt sie vorher
+// nach (tablesPending).
 const tablesPending = ref(false);
+const markdownChanges = () => (hasLayout.value ? { tables: true, headings: true } : { tables: true });
 function ensureTables() {
     tablesPending.value = false;
-    if (view.value !== 'markdown' || documentState.options.tables) return;
+    if (view.value !== 'markdown') return;
+    const changes = markdownChanges();
+    if (Object.keys(changes).every(key => documentState.options[key])) return;
     if (anyEdited.value) {
         tablesPending.value = true;
         return;
     }
-    draft.tables = true;
-    relayoutDocument({ tables: true });
+    confirmTables();
 }
 watch(view, ensureTables, { immediate: true });
 
 function confirmTables() {
-    draft.tables = true;
-    relayoutDocument({ tables: true });
+    const changes = markdownChanges();
+    Object.assign(draft, changes);
+    relayoutDocument(changes);
     tablesPending.value = false;
 }
 
@@ -333,6 +337,12 @@ function reset() {
           <label class="flex items-center gap-2"><input v-model="draft.structure" type="checkbox" class="checkbox checkbox-xs" /> Einrückungen und Spalten-Text erhalten</label>
           <label class="flex items-center gap-2"><input v-model="draft.keepLineNumbers" type="checkbox" class="checkbox checkbox-xs" /> Zeilennummern am Rand behalten</label>
           <label class="flex items-center gap-2"><input v-model="draft.markUncertain" type="checkbox" class="checkbox checkbox-xs" /> Unsichere Zeilen mit [?] markieren</label>
+          <template v-if="hasLayout">
+            <p class="mt-1 text-xs font-semibold uppercase tracking-wide opacity-60">Seiten mit Layoutmodell</p>
+            <label class="flex items-center gap-2"><input v-model="draft.headings" type="checkbox" class="checkbox checkbox-xs" /> Überschriften mit # kennzeichnen</label>
+            <label class="flex items-center gap-2"><input v-model="draft.footnotes" type="checkbox" true-value="dokument" false-value="seite" class="checkbox checkbox-xs" /> Fussnoten ans Dokumentende</label>
+            <label class="flex items-center gap-2"><input v-model="draft.placeholders" type="checkbox" class="checkbox checkbox-xs" /> Platzhalter für Bilder und Stempel</label>
+          </template>
           <p class="text-xs opacity-70">Der Text wird aus den bereits erkannten Zeilen neu aufgebaut, ohne neue Texterkennung.</p>
           <p v-if="confirmRelayout" class="text-xs text-warning">Deine Bearbeitungen gehen dabei verloren. Nochmals klicken zum Bestätigen.</p>
           <button class="btn btn-xs btn-primary self-start" :disabled="!draftChanged" @click="applyRelayout">

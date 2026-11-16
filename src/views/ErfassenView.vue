@@ -185,6 +185,32 @@ function noticeText(notice) {
                   <input v-model="documentState.options.markUncertain" type="checkbox" class="checkbox checkbox-sm" :disabled="!isEffective(model)" />
                   Unsichere Zeilen im Text mit [?] markieren
                 </label>
+                <div
+                  v-if="model.option === 'layout'"
+                  class="flex flex-col gap-1.5 text-sm"
+                  :class="{ 'opacity-50': !isEffective(model) }"
+                  data-testid="layout-optionen"
+                >
+                  <label class="flex items-center gap-2">
+                    <input v-model="documentState.options.headings" type="checkbox" class="checkbox checkbox-sm" :disabled="!isEffective(model)" />
+                    Überschriften mit # kennzeichnen
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <input
+                      v-model="documentState.options.footnotes"
+                      type="checkbox"
+                      true-value="dokument"
+                      false-value="seite"
+                      class="checkbox checkbox-sm"
+                      :disabled="!isEffective(model)"
+                    />
+                    Fussnoten ans Dokumentende
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <input v-model="documentState.options.placeholders" type="checkbox" class="checkbox checkbox-sm" :disabled="!isEffective(model)" />
+                    Platzhalter für Bilder und Stempel
+                  </label>
+                </div>
 
                 <details class="border-t border-base-300 pt-2 text-sm" data-testid="modell-details">
                   <summary class="cursor-pointer select-none text-xs font-semibold uppercase tracking-wide opacity-70">Was das Modell kann</summary>

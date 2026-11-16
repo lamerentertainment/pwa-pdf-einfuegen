@@ -120,3 +120,48 @@ describe('buildPageTexts mit Layoutbereichen', () => {
         expect(buildPageTexts([asTable], DEFAULT_OPTIONS)[0]).not.toContain('|');
     });
 });
+
+describe('Typ-gerechte Ausgabe (Etappe 2)', () => {
+    const view = [0, 0, 595, 842];
+    const line = (str, y, region) => ({ ...item(str, 72, y), region });
+    const region = (id, label) => ({ id, label, enabled: true });
+    const pages = () => [
+        { number: 1, view, layout: {
+            regions: [region('t', 'doc_title'), region('h', 'paragraph_title'), region('a', 'text'), region('f', 'footnote'), region('i', 'image'), region('s', 'seal')],
+            order: ['t', 'h', 'i', 'a', 's', 'f'],
+        }, items: [
+            line('Einvernahme', 800, 't'), line('der Zeugin', 785, 't'),
+            line('1. Personalien', 750, 'h'),
+            line('xX#~', 720, 'i'),
+            line('Die Zeugin erscheint.', 700, 'a'),
+            line('Eingegangen', 600, 's'), line('12.03.2024', 585, 's'),
+            line('1 Siehe Akten.', 100, 'f'),
+        ] },
+        { number: 2, view, layout: { regions: [region('b', 'text'), region('g', 'footnote')], order: ['b', 'g'] }, items: [
+            line('Weiter im Text.', 700, 'b'), line('2 BGE 140 IV 1.', 100, 'g'),
+        ] },
+    ];
+
+    it('lässt ohne Einstellungen alles wie bisher', () => {
+        expect(buildPageTexts(pages(), DEFAULT_OPTIONS)[0]).toBe(
+            'Einvernahme\nder Zeugin\n\n1. Personalien\n\nxX#~\n\nDie Zeugin erscheint.\n\nEingegangen\n12.03.2024\n\n1 Siehe Akten.');
+    });
+
+    it('kennzeichnet Titel als Überschrift (einzeilig) und setzt Platzhalter', () => {
+        const options = { ...DEFAULT_OPTIONS, headings: true, placeholders: true };
+        expect(buildPageTexts(pages(), options)[0]).toBe(
+            '# Einvernahme der Zeugin\n\n## 1. Personalien\n\n[Abbildung]\n\nDie Zeugin erscheint.\n\n[Stempel: Eingegangen 12.03.2024]\n\n1 Siehe Akten.');
+    });
+
+    it('sammelt Fussnoten aller Seiten am Dokumentende', () => {
+        const texts = buildPageTexts(pages(), { ...DEFAULT_OPTIONS, footnotes: 'dokument' });
+        expect(texts[0]).not.toContain('Siehe Akten');
+        expect(texts[1]).toBe('Weiter im Text.\n\n--- Fussnoten ---\n\n1 Siehe Akten.\n\n2 BGE 140 IV 1.');
+    });
+
+    it('lässt ausgeschaltete Fussnoten auch am Ende weg', () => {
+        const p = pages();
+        p[1].layout.regions[1].enabled = false;
+        expect(buildPageTexts(p, { ...DEFAULT_OPTIONS, footnotes: 'dokument' })[1]).toBe('Weiter im Text.\n\n--- Fussnoten ---\n\n1 Siehe Akten.');
+    });
+});
