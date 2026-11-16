@@ -59,6 +59,7 @@ export function layoutOptionsOf(options) {
         uncertainBelow: options.markUncertain ? UNCERTAIN_SCORE : undefined,
         structure: options.structure,
         tables: options.tables,
+        lists: Boolean(options.lists),
         // Nur Seiten mit Layoutmodell (typeOutput)
         headings: Boolean(options.headings),
         footnotes: ['dokument', 'markdown'].includes(options.footnotes) ? options.footnotes : 'seite',
@@ -190,7 +191,8 @@ export function regionText(page, regionId, layoutOptions) {
  */
 export function buildPageTexts(pages, options, groups = []) {
     const layoutOptions = layoutOptionsOf(options);
-    const input = pages.map(p => ({ items: p.layout ? [] : p.items, view: p.view }));
+    // Gezeichnete Aufzählungszeichen (bullets.js) vorerst nur auf Seiten mit eingebettetem Text
+    const input = pages.map(p => ({ items: p.layout ? [] : p.items, view: p.view, bullets: p.source === 'text' ? p.bullets : undefined }));
     const text = reconstructDocumentText(input, { ...layoutOptions, pageMarkers: true, pageLabel: SPLIT_LABEL });
     const base = splitPages(text, pages.length)
         // Rückfall, falls ein Dokument selbst eine solche Zeile enthält: Seite für Seite

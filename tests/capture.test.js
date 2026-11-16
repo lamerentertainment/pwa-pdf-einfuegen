@@ -70,6 +70,22 @@ describe('buildPageTexts', () => {
     });
 });
 
+describe('Aufzählungen', () => {
+    const view = [0, 0, 595, 842];
+    const page = source => ({
+        number: 1, view, source,
+        items: [item('Einkommen', 90, 700), item('abzüglich Steuern', 110, 685)],
+        bullets: [{ x: 80, y: 703, w: 4, h: 4 }, { x: 100, y: 688, w: 4, h: 4 }],
+    });
+
+    it('setzt gezeichnete Punkte nur mit der Einstellung und nur auf digitalen Seiten', () => {
+        const lists = { ...DEFAULT_OPTIONS, lists: true };
+        expect(buildPageTexts([page('text')], lists)[0]).toBe('- Einkommen\n  - abzüglich Steuern');
+        expect(buildPageTexts([page('text')], DEFAULT_OPTIONS)[0]).not.toContain('-');
+        expect(buildPageTexts([page('ocr')], lists)[0]).not.toContain('-');
+    });
+});
+
 describe('joinPages', () => {
     const pages = [{ number: 1, text: 'Eins ' }, { number: 2, text: '' }, { number: 3, text: 'Drei' }];
 

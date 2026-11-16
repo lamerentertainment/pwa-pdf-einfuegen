@@ -10,6 +10,7 @@ import ocrService, { LAYOUT_MODEL_ID, OCR_MODEL_ID } from '../ocr/ocrService.js'
 import { DEFAULT_OPTIONS, UNCERTAIN_SCORE } from './options.js';
 import { buildPageTexts, ocrLineBox, regionBox, textItemBox } from './pageModel.js';
 import { createLayout } from './layoutRegions.js';
+import { findBulletShapes } from './bullets.js';
 
 const PDFJS_BASE = `/vendor/pdfjs-${pdfjsLib.version}/`;
 pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}pdf.worker.min.mjs`;
@@ -41,7 +42,8 @@ async function readPage(pdf, n) {
     const viewport = page.getViewport({ scale: 1 });
     const textContent = await page.getTextContent();
     const items = textContent.items.filter(item => typeof item.str === 'string');
-    const { scanned, reason } = await classifyPage(page, textContent, pdfjsLib.OPS);
+    const ops = await page.getOperatorList();
+    const { scanned, reason } = await classifyPage(page, textContent, pdfjsLib.OPS, ops);
     page.cleanup();
     return {
         scanned,
@@ -52,6 +54,9 @@ async function readPage(pdf, n) {
             view: page.view,
             items,
             boxes: items.filter(i => i.str.trim()).map(i => textItemBox(i, viewport)),
+            // Als Grafik gezeichnete Aufzählungszeichen; ob sie zu «- » werden, entscheidet
+            // erst der Textaufbau (Einstellung «lists»), damit sie sich nachträglich umschalten lässt
+            bullets: findBulletShapes(ops, pdfjsLib.OPS),
             layout: null,
             source: items.some(i => i.str.trim()) ? 'text' : 'leer',
             scanReason: scanned ? reason : null,

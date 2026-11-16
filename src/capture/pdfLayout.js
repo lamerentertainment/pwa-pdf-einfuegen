@@ -10,6 +10,8 @@
 // - structure: keep the page's layout: indentation as leading spaces, text left and right on the
 //   same line (place and date, signatures, form labels) on one line at its column
 // - tables: write tables as Markdown tables (see findRegions)
+// - lists: bulleted lines as Markdown list items ("- ", two spaces per level); bullets drawn as
+//   shapes come per page as `bullets` (see bullets.js), bullets in the text are found here
 // - pageMarkers / pageLabel (document only): put "--- Seite 1 ---" in front of every page
 
 /** Prefix of OCR lines recognized with low confidence: plain ASCII, so easy to search for. */
@@ -33,10 +35,12 @@ function buildContext(boxes) {
     const sortedH = boxes.map(b => b.h).sort((a, b) => a - b);
     const medianH = sortedH[Math.floor(sortedH.length / 2)] || 12;
 
-    // Average char width for gap classification
-    const avgCharW = boxes.reduce((sum, b) => {
+    // Average char width for gap classification; inserted list markers span up to their text and
+    // would skew it
+    const measured = boxes.filter(b => !b.synthetic);
+    const avgCharW = measured.reduce((sum, b) => {
         return sum + (b.str.length > 0 ? b.w / b.str.length : 0);
-    }, 0) / boxes.length || 7;
+    }, 0) / measured.length || 7;
 
     return {
         medianH,
@@ -84,7 +88,13 @@ function renderFlow(boxes, ctx, left) {
 }
 
 export function reconstructPageText(items, options = {}) {
-    return layoutBoxes(stripLineNumbers(toBoxes(items, options), options), options);
+    return layoutBoxes(prepareBoxes(items, options.bullets, options), options);
+}
+
+// Boxes of a page: margin line numbers out (or attached to their line), list markers in
+function prepareBoxes(items, bullets, options) {
+    const boxes = stripLineNumbers(toBoxes(items, options), options);
+    return options.lists ? markListItems(boxes, bullets ?? []) : boxes;
 }
 
 /**
@@ -99,7 +109,7 @@ export function reconstructPageText(items, options = {}) {
  *   they set the margins
  */
 export function reconstructPartText(items, isPart, options = {}, isText = () => true) {
-    const boxes = stripLineNumbers(toBoxes(items, options), options);
+    const boxes = prepareBoxes(items, options.bullets, options);
     const part = boxes.filter(b => isPart(b.item));
     if (!options.structure || part.length === 0) return layoutBoxes(part, options);
     const text = boxes.filter(b => isText(b.item) || isPart(b.item));
@@ -172,6 +182,92 @@ function dehyphenate(text) {
             /([A-Za-zÄÖÜäöüß])[-\u2010\u2011]\n{1,2} *(?!(?:und|oder|bzw|sowie|resp|bis|and|or|et|ou)\b)(?=[a-zäöüß])/g,
             '$1'
         );
+}
+
+// --- Lists ------------------------------------------------------------------------------------
+//
+// A line counts as a list item when it starts with a bullet: a shape drawn left of its first box
+// (bullets.js), a bullet character standing alone in front of the text, or one at the start of
+// the first box followed by a space. Dashes count only as a box of their own or with a space
+// after them. The bullet becomes a "- " box spanning up to the text, so the line renders as
+// "- text"; nesting levels come from the bullets' positions (see listLevels).
+
+const BULLET_CHARS = '•●○◦▪■□‣⁃∙·';
+const DASHES = '–—-'; // hyphen last: literal in a character class
+const BULLET_ONLY_RE = new RegExp(`^[${BULLET_CHARS}${DASHES}]$`);
+const BULLET_PREFIX_RE = new RegExp(`^\\s*[${BULLET_CHARS}${DASHES}]\\s+(?=\\S)`);
+// A new list starts after this many line heights without a bullet
+const LIST_BREAK_LINES = 6;
+
+function markListItems(boxes, bullets) {
+    if (boxes.length === 0) return boxes;
+    const { yTolerance, avgCharW } = buildContext(boxes);
+    const sameLine = (a, b) => Math.abs(a.y - b.y) <= yTolerance;
+    const firstOnLine = box => !boxes.some(b => b !== box && sameLine(b, box) && b.x < box.x);
+    const nextOnLine = box => boxes
+        .filter(b => b !== box && sameLine(b, box) && b.x > box.x)
+        .reduce((best, b) => (!best || b.x < best.x ? b : best), null);
+    const markerBox = (x, text, dash = false) => ({ str: '- ', x, y: text.y, w: Math.max(text.x - x, 0), h: text.h, item: text.item, dash, synthetic: true });
+
+    const markers = [];
+    const replaced = new Map();
+    // Bullets drawn as shapes: the nearest text starting right of it, at its height
+    for (const bullet of bullets) {
+        const cy = bullet.y + bullet.h / 2;
+        const text = boxes
+            .filter(b => cy >= b.y - b.h * 0.1 && cy <= b.y + b.h * 0.8)
+            .filter(b => b.x >= bullet.x + bullet.w && b.x - (bullet.x + bullet.w) <= 3 * b.h)
+            .reduce((best, b) => (!best || b.x < best.x ? b : best), null);
+        if (!text || !firstOnLine(text) || markers.some(m => sameLine(m, text))) continue;
+        markers.push(markerBox(bullet.x, text));
+    }
+    // Bullets in the text
+    for (const box of boxes) {
+        if (!firstOnLine(box) || markers.some(m => sameLine(m, box))) continue;
+        const str = box.str.trim();
+        const dash = DASHES.includes(str[0]);
+        if (BULLET_ONLY_RE.test(str)) {
+            const text = nextOnLine(box);
+            if (!text || text.x - (box.x + box.w) > 6 * avgCharW) continue;
+            const marker = markerBox(box.x, text, dash);
+            replaced.set(box, marker);
+            markers.push(marker);
+        } else if (BULLET_PREFIX_RE.test(box.str)) {
+            const marker = { ...box, str: `- ${box.str.replace(BULLET_PREFIX_RE, '')}`, dash };
+            replaced.set(box, marker);
+            markers.push(marker);
+        }
+    }
+    // A dash at the start of a single line is more likely a dash in running text
+    // ("… sagte er – und …" wrapped there): dashes need a second one below or above them
+    const near = (a, b) => Math.abs(a.x - b.x) <= avgCharW * 1.5 && Math.abs(a.y - b.y) <= LIST_BREAK_LINES * a.h;
+    for (const m of markers.filter(m => m.dash)) {
+        if (!markers.some(o => o !== m && o.dash && near(o, m))) {
+            markers.splice(markers.indexOf(m), 1);
+            for (const [box, marker] of replaced) if (marker === m) replaced.delete(box);
+        }
+    }
+    if (markers.length === 0) return boxes;
+    listLevels(markers, avgCharW);
+    const result = boxes.map(b => replaced.get(b) ?? b);
+    return [...result, ...markers.filter(m => !result.includes(m))];
+}
+
+// Levels by indentation, top to bottom: a bullet further right than the one above opens a level,
+// one further left goes back to the level it lines up with. A long stretch without bullets ends
+// the list.
+function listLevels(markers, avgCharW) {
+    const tolerance = avgCharW * 1.5;
+    const sorted = [...markers].sort((a, b) => b.y - a.y);
+    let stack = [];
+    let lastY = null;
+    for (const m of sorted) {
+        if (lastY !== null && lastY - m.y > LIST_BREAK_LINES * m.h) stack = [];
+        while (stack.length && stack[stack.length - 1] > m.x + tolerance) stack.pop();
+        if (!stack.length || m.x > stack[stack.length - 1] + tolerance) stack.push(m.x);
+        m.listLevel = stack.length - 1;
+        lastY = m.y;
+    }
 }
 
 // --- Line numbers ---------------------------------------------------------------------------
@@ -270,13 +366,14 @@ function isMarginColumn(group, boxes) {
 }
 
 /**
- * @param {Array<{items: Array, view: number[]}>} pages pdf.js text items and page.view per page
+ * @param {Array<{items: Array, view: number[], bullets?: Array}>} pages pdf.js text items,
+ *   page.view and drawn bullets (bullets.js) per page
  * @param {{keepLineNumbers?: boolean, uncertainBelow?: number, structure?: boolean,
  *   tables?: boolean, pageMarkers?: boolean, pageLabel?: string}} [options] see top of file
  */
 export function reconstructDocumentText(pages, options = {}) {
-    const parsed = pages.map(({ items, view }) => {
-        const boxes = stripLineNumbers(toBoxes(items, options), options);
+    const parsed = pages.map(({ items, view, bullets }) => {
+        const boxes = prepareBoxes(items, bullets, options);
         return { boxes, lines: view ? marginLines(boxes, view) : [] };
     });
 
@@ -456,7 +553,9 @@ function renderLine(sorted, ctx, left) {
     for (const box of sorted) {
         const str = box.uncertain ? `${UNCERTAIN_MARK} ${box.str}` : box.str;
         if (prevRight === null) {
-            if (left !== undefined) {
+            if (box.listLevel !== undefined) {
+                text += '  '.repeat(box.listLevel);
+            } else if (left !== undefined) {
                 const indent = column(box.x);
                 if (indent >= MIN_INDENT) text += ' '.repeat(Math.min(indent, MAX_INDENT));
             }

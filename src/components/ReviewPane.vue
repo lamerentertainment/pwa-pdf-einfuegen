@@ -41,7 +41,7 @@ const rendered = computed(() => (view.value === 'markdown' ? renderMarkdown(page
 const pageHasTable = computed(() => hasMarkdownTable(page.value.text));
 
 // Textaufbau nachträglich ändern – aus den erkannten Zeilen, ohne neue Texterkennung
-const LAYOUT_KEYS = ['tables', 'structure', 'keepLineNumbers', 'markUncertain', 'headings', 'footnotes', 'placeholders'];
+const LAYOUT_KEYS = ['tables', 'lists', 'structure', 'keepLineNumbers', 'markUncertain', 'headings', 'footnotes', 'placeholders'];
 const draft = reactive(Object.fromEntries(LAYOUT_KEYS.map(key => [key, documentState.options[key]])));
 const draftChanged = computed(() => LAYOUT_KEYS.some(key => draft[key] !== documentState.options[key]));
 const anyEdited = computed(() => documentState.pages.some(p => p.text !== p.originalText));
@@ -65,7 +65,7 @@ function cancelRelayout() {
 // die Überschriften. Gibt es Bearbeitungen, die beim Neuaufbau verloren gingen, fragt sie vorher
 // nach (tablesPending).
 const tablesPending = ref(false);
-const markdownChanges = () => (hasLayout.value ? { tables: true, headings: true } : { tables: true });
+const markdownChanges = () => (hasLayout.value ? { tables: true, lists: true, headings: true } : { tables: true, lists: true });
 function ensureTables() {
     tablesPending.value = false;
     if (view.value !== 'markdown') return;
@@ -416,6 +416,7 @@ function reset() {
         <summary class="cursor-pointer select-none">Textaufbau anpassen</summary>
         <div class="mt-2 flex flex-col gap-1.5 rounded-box border border-base-300 bg-base-100 p-3">
           <label class="flex items-center gap-2"><input v-model="draft.tables" type="checkbox" class="checkbox checkbox-xs" /> Tabellen als Markdown-Tabellen</label>
+          <label class="flex items-center gap-2"><input v-model="draft.lists" type="checkbox" class="checkbox checkbox-xs" /> Aufzählungen als Markdown-Listen</label>
           <label class="flex items-center gap-2"><input v-model="draft.structure" type="checkbox" class="checkbox checkbox-xs" /> Einrückungen und Spalten-Text erhalten</label>
           <label class="flex items-center gap-2"><input v-model="draft.keepLineNumbers" type="checkbox" class="checkbox checkbox-xs" /> Zeilennummern am Rand behalten</label>
           <label class="flex items-center gap-2"><input v-model="draft.markUncertain" type="checkbox" class="checkbox checkbox-xs" /> Unsichere Zeilen mit [?] markieren</label>

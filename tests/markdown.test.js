@@ -5,6 +5,10 @@ describe('prepareMarkdown', () => {
     it('entfernt Einrückungen, damit sie nicht als Codeblock gelten', () => {
         expect(prepareMarkdown('Frage:\n                Antwort eingerückt\n    1. Punkt')).toBe('Frage:\nAntwort eingerückt\n1. Punkt');
     });
+
+    it('lässt die Einrückung verschachtelter Listenpunkte stehen', () => {
+        expect(prepareMarkdown('- Einkommen\n  - abzüglich Steuern\n    weiter')).toBe('- Einkommen\n  - abzüglich Steuern\nweiter');
+    });
 });
 
 describe('hasMarkdownTable', () => {

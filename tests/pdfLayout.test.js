@@ -390,3 +390,57 @@ describe('Silbentrennung am Zeilenende', () => {
         expect(reconstructDocumentText(page(['Ein‐', 'und Ausgang']))).toBe('Ein‐\nund Ausgang');
     });
 });
+
+describe('lists', () => {
+    // Punkt 3 pt gross, auf halber Höhe der 10-pt-Zeile, 8 pt vor dem Text
+    const bulletAt = (textX, y) => ({ x: textX - 11, y: y + 2, w: 3, h: 3 });
+    const page = () => ({
+        items: [
+            item('Die Rechnung:', 50, 700),
+            item('Einkommen netto', 70, 685),
+            item('abzüglich Steuern', 90, 670),
+            item('abzüglich Unterhalt', 90, 655),
+            item('Tagessatz', 70, 640),
+        ],
+        bullets: [bulletAt(70, 685), bulletAt(90, 670), bulletAt(90, 655), bulletAt(70, 640)],
+    });
+    const expected = 'Die Rechnung:\n- Einkommen netto\n  - abzüglich Steuern\n  - abzüglich Unterhalt\n- Tagessatz';
+
+    it('macht aus gezeichneten Punkten verschachtelte Markdown-Listen', () => {
+        const { items, bullets } = page();
+        expect(reconstructPageText(items, { lists: true, bullets, structure: true })).toBe(expected);
+        expect(reconstructPageText(items, { lists: true, bullets })).toBe(expected);
+        expect(reconstructDocumentText([{ ...page(), view: [0, 0, 600, 800] }], { lists: true })).toBe(expected);
+    });
+
+    it('lässt den Text ohne die Einstellung wie bisher', () => {
+        const { items, bullets } = page();
+        expect(reconstructPageText(items, { bullets, structure: true })).toBe(
+            'Die Rechnung:\nEinkommen netto\n    abzüglich Steuern\n    abzüglich Unterhalt\nTagessatz');
+    });
+
+    it('erkennt Aufzählungszeichen im Text, allein oder vor dem Text', () => {
+        const text = reconstructPageText([
+            item('•', 50, 700), item('Erster Punkt', 60, 700),
+            item('• Zweiter Punkt', 50, 685),
+            item('', 50, 670), item('Dritter Punkt (Symbol-Schrift)', 60, 670),
+        ], { lists: true });
+        expect(text).toBe('- Erster Punkt\n- Zweiter Punkt\n- Dritter Punkt (Symbol-Schrift)');
+    });
+
+    it('nimmt Striche nur als Liste, wenn mehrere untereinander stehen', () => {
+        const dashes = reconstructPageText([item('– erstens', 50, 700), item('– zweitens', 50, 685)], { lists: true });
+        expect(dashes).toBe('- erstens\n- zweitens');
+        const prose = reconstructPageText([
+            item('Er sagte', 50, 700), item('– und das ist wichtig – nichts.', 50, 685),
+        ], { lists: true });
+        expect(prose).toBe('Er sagte\n– und das ist wichtig – nichts.');
+    });
+
+    it('fängt nach einer langen Lücke eine neue Liste an', () => {
+        const text = reconstructPageText([
+            item('Oben eingerückt', 90, 700), item('Unten', 70, 500),
+        ], { lists: true, bullets: [bulletAt(90, 700), bulletAt(70, 500)] });
+        expect(text).toBe('- Oben eingerückt\n\n- Unten');
+    });
+});

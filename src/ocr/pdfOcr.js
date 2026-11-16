@@ -16,11 +16,12 @@ const TEXT_RENDER_INVISIBLE = 3;
  * @param {object} page pdf.js PDFPageProxy
  * @param {{items: Array}} textContent result of page.getTextContent()
  * @param {object} OPS pdfjsLib.OPS
+ * @param {object} [ops] page.getOperatorList(), if already at hand
  * @returns {Promise<{scanned: boolean, reason: string}>}
  */
-export async function classifyPage(page, textContent, OPS) {
+export async function classifyPage(page, textContent, OPS, ops) {
     const textChars = textContent.items.reduce((n, item) => n + (item.str ? item.str.trim().length : 0), 0);
-    const ops = await page.getOperatorList();
+    ops ??= await page.getOperatorList();
     const { hasImage, visibleText, invisibleText } = scanOperators(ops, OPS);
 
     if (!hasImage) return { scanned: false, reason: 'no-image' };

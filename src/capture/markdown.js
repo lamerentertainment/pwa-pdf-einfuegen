@@ -19,10 +19,11 @@ const marked = new Marked({
 
 /**
  * Bereitet den erfassten Text für Markdown vor: Die Einrückungen aus «Einrückungen erhalten»
- * würden sonst ab vier Leerzeichen als Codeblock gelten.
+ * würden sonst ab vier Leerzeichen als Codeblock gelten. Listenpunkte («- ») behalten ihre
+ * Einrückung, sie trägt die Verschachtelung (zwei Leerzeichen pro Ebene, siehe pdfLayout.js).
  */
 export function prepareMarkdown(text) {
-    return text.split('\n').map(line => line.replace(/^[ \t]+/, '')).join('\n');
+    return text.split('\n').map(line => (/^ *- \S/.test(line) ? line : line.replace(/^[ \t]+/, ''))).join('\n');
 }
 
 /** Markdown → bereinigtes HTML. */

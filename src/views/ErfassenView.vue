@@ -247,6 +247,13 @@ function noticeText(notice) {
                 </span>
               </label>
               <label class="flex items-center gap-2">
+                <input v-model="documentState.options.lists" type="checkbox" class="checkbox checkbox-sm" />
+                <span>
+                  Aufzählungen als Markdown-Listen
+                  <span class="text-xs opacity-70">(vorerst nur digitale Seiten)</span>
+                </span>
+              </label>
+              <label class="flex items-center gap-2">
                 <input v-model="documentState.options.keepLineNumbers" type="checkbox" class="checkbox checkbox-sm" />
                 Zeilennummern am Rand behalten
               </label>

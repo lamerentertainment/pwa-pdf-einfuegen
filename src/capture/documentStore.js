@@ -114,7 +114,7 @@ export function replacePage(state, record) {
         .map(g => ({ ...g, members: g.members.filter(m => m.page !== n) }))
         .filter(g => g.members.length >= 2);
     const page = state.pages[at];
-    for (const key of ['items', 'boxes', 'view', 'layout', 'source', 'scanReason', 'dpi', 'width', 'height']) delete page[key];
+    for (const key of ['items', 'boxes', 'bullets', 'view', 'layout', 'source', 'scanReason', 'dpi', 'width', 'height']) delete page[key];
     Object.assign(page, record, { items: markRaw(record.items), boxes: markRaw(record.boxes) });
     const texts = buildPageTexts(state.pages, state.options, state.layoutGroups);
     state.pages.forEach((p, i) => {
