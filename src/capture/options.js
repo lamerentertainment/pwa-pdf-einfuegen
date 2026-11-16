@@ -14,6 +14,6 @@ export const DEFAULT_OPTIONS = Object.freeze({
     tables: false, // Tabellen als Markdown (ohne Layoutmodell ab 3 Spalten, sonst in Tabellenbereichen)
     // Nur Seiten mit Layoutmodell:
     headings: false, // Dokument- und Abschnittstitel als Markdown-Überschrift (# / ##)
-    footnotes: 'seite', // Fussnoten: 'seite' (wo sie stehen) oder 'dokument' (gesammelt am Ende)
+    footnotes: 'seite', // Fussnoten: 'seite' (wo sie stehen), 'dokument' (gesammelt am Ende) oder 'markdown' ([^1] an der Fundstelle)
     placeholders: false, // [Abbildung], [Diagramm], [Stempel: …] statt Zeichensalat oder Lücke
 });

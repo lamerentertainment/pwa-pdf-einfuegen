@@ -412,7 +412,7 @@ function reset() {
           </button>
         </div>
       </details>
-      <details @toggle="cancelRelayout">
+      <details @toggle="event => event.target.open || cancelRelayout()">
         <summary class="cursor-pointer select-none">Textaufbau anpassen</summary>
         <div class="mt-2 flex flex-col gap-1.5 rounded-box border border-base-300 bg-base-100 p-3">
           <label class="flex items-center gap-2"><input v-model="draft.tables" type="checkbox" class="checkbox checkbox-xs" /> Tabellen als Markdown-Tabellen</label>
@@ -422,8 +422,15 @@ function reset() {
           <template v-if="hasLayout">
             <p class="mt-1 text-xs font-semibold uppercase tracking-wide opacity-60">Seiten mit Layoutmodell</p>
             <label class="flex items-center gap-2"><input v-model="draft.headings" type="checkbox" class="checkbox checkbox-xs" /> Überschriften mit # kennzeichnen</label>
-            <label class="flex items-center gap-2"><input v-model="draft.footnotes" type="checkbox" true-value="dokument" false-value="seite" class="checkbox checkbox-xs" /> Fussnoten ans Dokumentende</label>
-            <label class="flex items-center gap-2"><input v-model="draft.placeholders" type="checkbox" class="checkbox checkbox-xs" /> Platzhalter für Bilder und Stempel</label>
+            <label class="flex items-center gap-2">
+              Fussnoten
+              <select v-model="draft.footnotes" class="select select-xs w-auto" aria-label="Fussnoten">
+                <option value="seite">an ihrer Stelle</option>
+                <option value="dokument">ans Dokumentende</option>
+                <option value="markdown">als Markdown-Fussnoten [^1]</option>
+              </select>
+            </label>
+            <label class="flex items-center gap-2"><input v-model="draft.placeholders" type="checkbox" class="checkbox checkbox-xs" /> Platzhalter für Bilder (mit Bildunterschrift) und Stempel</label>
           </template>
           <p class="text-xs opacity-70">Der Text wird aus den bereits erkannten Zeilen neu aufgebaut, ohne neue Texterkennung.</p>
           <p v-if="confirmRelayout" class="text-xs text-warning">Deine Bearbeitungen gehen dabei verloren. Nochmals klicken zum Bestätigen.</p>

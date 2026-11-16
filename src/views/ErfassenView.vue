@@ -206,19 +206,16 @@ function noticeText(notice) {
                     Überschriften mit # kennzeichnen
                   </label>
                   <label class="flex items-center gap-2">
-                    <input
-                      v-model="documentState.options.footnotes"
-                      type="checkbox"
-                      true-value="dokument"
-                      false-value="seite"
-                      class="checkbox checkbox-sm"
-                      :disabled="!isEffective(model)"
-                    />
-                    Fussnoten ans Dokumentende
+                    Fussnoten
+                    <select v-model="documentState.options.footnotes" class="select select-xs w-auto" :disabled="!isEffective(model)" aria-label="Fussnoten">
+                      <option value="seite">an ihrer Stelle</option>
+                      <option value="dokument">ans Dokumentende</option>
+                      <option value="markdown">als Markdown-Fussnoten [^1]</option>
+                    </select>
                   </label>
                   <label class="flex items-center gap-2">
                     <input v-model="documentState.options.placeholders" type="checkbox" class="checkbox checkbox-sm" :disabled="!isEffective(model)" />
-                    Platzhalter für Bilder und Stempel
+                    Platzhalter für Bilder (mit Bildunterschrift) und Stempel
                   </label>
                 </div>
 

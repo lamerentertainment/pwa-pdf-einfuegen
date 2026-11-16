@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPageTexts, ocrLineBox, regionBox, splitPages, textItemBox } from '../src/capture/pageModel.js';
+import { buildPageTexts, figureCaptions, markFootnoteReference, ocrLineBox, regionBox, splitFootnotes, splitPages, textItemBox } from '../src/capture/pageModel.js';
 import { joinPages } from '../src/capture/joinPages.js';
 import { DEFAULT_OPTIONS } from '../src/capture/options.js';
 
@@ -163,5 +163,69 @@ describe('Typ-gerechte Ausgabe (Etappe 2)', () => {
         const p = pages();
         p[1].layout.regions[1].enabled = false;
         expect(buildPageTexts(p, { ...DEFAULT_OPTIONS, footnotes: 'dokument' })[1]).toBe('Weiter im Text.\n\n--- Fussnoten ---\n\n1 Siehe Akten.');
+    });
+});
+
+describe('Markdown-Fussnoten und Bildunterschriften', () => {
+    const view = [0, 0, 595, 842];
+    const line = (str, y, region) => ({ ...item(str, 72, y), region });
+    const region = (id, label, box = {}) => ({ id, label, enabled: true, x: 72, y: 0, w: 400, h: 20, ...box });
+
+    it('zerlegt Fussnotenbereiche in einzelne Fussnoten', () => {
+        expect(splitFootnotes('1 Siehe Akten.\n² BGE 140 IV 1,\nE. 3.2.\nohne Nummer')).toEqual([
+            { number: '1', text: 'Siehe Akten.' },
+            { number: '2', text: 'BGE 140 IV 1, E. 3.2. ohne Nummer' },
+        ]);
+        expect(splitFootnotes('Quelle: Akten')).toEqual([{ number: null, text: 'Quelle: Akten' }]);
+    });
+
+    it('findet Fussnotenzeichen nur, wo sie eindeutig sind', () => {
+        expect(markFootnoteReference('Die Akten.1 Weiter', '1', '1')).toBe('Die Akten.[^1] Weiter');
+        expect(markFootnoteReference('Die Zeugin² sagt', '2', '2')).toBe('Die Zeugin[^2] sagt');
+        expect(markFootnoteReference('gemäss Art. 1 und Ziff. 3.1 am 12.03.2024', '1', '1')).toBeNull();
+        expect(markFootnoteReference('Abschnitt12 folgt', '1', '1')).toBeNull();
+    });
+
+    const pages = () => [
+        { number: 1, view, layout: { regions: [region('a', 'text'), region('f', 'footnote')], order: ['a', 'f'] }, items: [
+            line('Die Zeugin erscheint.1 Sie sagt aus.', 700, 'a'), line('1 Siehe Akten.', 100, 'f'),
+        ] },
+        { number: 2, view, layout: { regions: [region('b', 'text'), region('g', 'footnote')], order: ['b', 'g'] }, items: [
+            line('Weiter im Text²', 700, 'b'), line('2 BGE 140 IV 1.', 100, 'g'),
+        ] },
+    ];
+
+    it('setzt [^n] an die Fundstelle und die Definitionen ans Dokumentende', () => {
+        const texts = buildPageTexts(pages(), { ...DEFAULT_OPTIONS, footnotes: 'markdown' });
+        expect(texts[0]).toBe('Die Zeugin erscheint.[^1] Sie sagt aus.');
+        expect(texts[1]).toBe('Weiter im Text[^2]\n\n[^1]: Siehe Akten.\n\n[^2]: BGE 140 IV 1.');
+    });
+
+    it('macht doppelte Nummern eindeutig', () => {
+        const p = pages();
+        p[1].items = [line('Weiter im Text.1', 700, 'b'), line('1 Andere Quelle.', 100, 'g')];
+        const texts = buildPageTexts(p, { ...DEFAULT_OPTIONS, footnotes: 'markdown' });
+        expect(texts[0]).toBe('Die Zeugin erscheint.[^1] Sie sagt aus.');
+        expect(texts[1]).toBe('Weiter im Text.[^2-1]\n\n[^1]: Siehe Akten.\n\n[^2-1]: Andere Quelle.');
+    });
+
+    it('ordnet Bildunterschriften dem nächsten Bild zu', () => {
+        const regions = [
+            region('i', 'image', { y: 100, h: 200 }),
+            region('c', 'figure_title', { y: 305, h: 15 }),
+            region('j', 'chart', { y: 400, h: 100 }),
+            region('d', 'figure_title', { y: 380, h: 15 }),
+            region('x', 'figure_title', { y: 700, h: 15 }),
+        ];
+        expect([...figureCaptions(regions)]).toEqual([['i', 'c'], ['j', 'd']]);
+    });
+
+    it('nimmt die Bildunterschrift in den Platzhalter', () => {
+        const page = { number: 1, view, layout: {
+            regions: [region('i', 'image', { y: 100, h: 200 }), region('c', 'figure_title', { y: 305, h: 15 }), region('a', 'text', { y: 400 })],
+            order: ['i', 'c', 'a'],
+        }, items: [line('xX#~', 600, 'i'), line('Abb. 1: Tatort', 530, 'c'), line('Text.', 430, 'a')] };
+        expect(buildPageTexts([page], { ...DEFAULT_OPTIONS, placeholders: true })[0]).toBe('[Abbildung: Abb. 1: Tatort]\n\nText.');
+        expect(buildPageTexts([page], DEFAULT_OPTIONS)[0]).toBe('xX#~\n\nAbb. 1: Tatort\n\nText.');
     });
 });

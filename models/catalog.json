@@ -54,7 +54,7 @@
         "Reihenfolge ändern: mit Pfeilen in der Liste oder indem man die Bereiche im PDF nacheinander anklickt.",
         "Verbinden: Bereiche, auch über Seitengrenzen hinweg, zu einem Absatz zusammenfügen; am Seitenende getrennte Wörter werden wieder zusammengesetzt.",
         "Nebeneinander zusammenlegen: getrennt erkannte Spalten eines Formulars (Bezeichnung und Wert) wieder auf eine Zeile bringen, z. B. «Name: Muster».",
-        "Auf Wunsch: Dokument- und Abschnittstitel als Überschrift mit # (in der Tabellenansicht als Gliederung), Fussnoten gesammelt ans Dokumentende statt mitten in den Text beim Seitenwechsel, Platzhalter wie [Abbildung] oder [Stempel: Eingegangen 12.03.2024] statt Zeichensalat aus Bildern."
+        "Auf Wunsch: Dokument- und Abschnittstitel als Überschrift mit # (in der Tabellenansicht als Gliederung), Fussnoten gesammelt ans Dokumentende statt mitten in den Text beim Seitenwechsel oder als Markdown-Fussnoten [^1] an der Fundstelle, Platzhalter wie [Abbildung: Bildunterschrift] oder [Stempel: Eingegangen 12.03.2024] statt Zeichensalat aus Bildern."
       ],
       "without": "Kopf- und Fusszeilen, die sich auf mehreren Seiten wiederholen, werden trotzdem erkannt und weggelassen (anhand der Wiederholung, ohne Modell).",
       "usage": "Wirkt nur zusammen mit der Texterkennung und nur auf gescannten Seiten, wenn es aktiviert ist. Braucht pro Seite etwa eine Sekunde zusätzlich.",
