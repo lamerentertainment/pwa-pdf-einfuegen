@@ -8,7 +8,7 @@ import ModelleView from './views/ModelleView.vue';
 import VerbindungView from './views/VerbindungView.vue';
 import { BUILD, connection } from './net/connection.js';
 
-// Hauptmenü: die drei Arbeitsschritte; Modelle/Programmupdate und Internetverbindung stehen abgesetzt daneben
+// Hauptmenü: die drei Arbeitsschritte; Modelle/Programmupdate und Internetverbindungsprotokoll stehen abgesetzt daneben
 const steps = [
     { id: 'erfassen', number: 1, label: 'PDF-Seiten (mit Text- und/oder Layouterkennung) erfassen', component: ErfassenView },
     { id: 'verarbeiten', number: 2, label: 'Text mit hartkodierten Algorithmen transformieren (KRG-Makros)', component: VerarbeitenView },
@@ -16,7 +16,7 @@ const steps = [
 ];
 const extras = [
     { id: 'modelle', label: 'Modelle/Programmupdate', component: ModelleView },
-    { id: 'verbindung', label: 'Internetverbindung', component: VerbindungView },
+    { id: 'verbindung', label: 'Internetverbindungsprotokoll', component: VerbindungView },
 ];
 const tabs = [...steps, ...extras];
 const active = ref('erfassen');
@@ -39,7 +39,7 @@ const commitUrl = `${BUILD.repository}/commit/${BUILD.commit}`;
               v-for="tab in extras"
               :key="tab.id"
               class="btn btn-sm"
-              :class="active === tab.id ? 'btn-neutral' : 'btn-ghost'"
+              :class="active === tab.id ? 'btn-neutral' : 'btn-ghost font-normal text-base-content/60 hover:text-base-content'"
               :aria-current="active === tab.id ? 'page' : undefined"
               @click="active = tab.id"
             >
