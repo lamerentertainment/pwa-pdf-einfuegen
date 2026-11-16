@@ -5,7 +5,7 @@ import ocrService from '../ocr/ocrService.js';
 import ModelInfo from '../components/ModelInfo.vue';
 import { checkWebGPU } from '../llm/llmService.js';
 import {
-    download, formatBytes, getStatus, models, modelSize, remove, requestPersistence, storageInfo, verify,
+    componentsOf, download, formatBytes, getStatus, missingSize, models, modelSize, remove, requestPersistence, storageInfo, verify,
 } from '../models/modelStore.js';
 
 const nameOf = id => models.find(m => m.id === id)?.name ?? id;
@@ -15,13 +15,16 @@ const STATUS_LABEL = { installiert: '✓ Installiert', unvollstaendig: 'Unvollst
 
 // Pro Modell: Status, laufender Vorgang, Fortschritt und Meldung
 const rows = reactive(Object.fromEntries(models.map(model => [model.id, {
-    status: null, busy: null, progress: 0, message: null, error: false, controller: null,
+    status: null, missing: 0, busy: null, progress: 0, message: null, error: false, controller: null,
 }])));
 const storage = ref({ usage: 0, quota: 0, persisted: false });
 const connected = computed(() => connection.mode === 'verbunden');
 
 async function refresh() {
-    for (const model of models) rows[model.id].status = await getStatus(model);
+    for (const model of models) {
+        rows[model.id].status = await getStatus(model);
+        rows[model.id].missing = await missingSize(model);
+    }
     storage.value = await storageInfo();
 }
 onMounted(async () => {
@@ -133,7 +136,7 @@ async function persist() {
         <ModelInfo :model="model" />
         <p class="text-sm">
           <span class="text-xs font-semibold uppercase tracking-wide opacity-60">Einstellung</span><br />
-          <template v-if="model.stage === 3">In «3 · Transformieren» unter «Sprachmodell» wählbar, sobald es installiert ist.</template>
+          <template v-if="model.stage === 3">In «3 · Transformieren» unter «Sprachmodell» wählbar. Die gemeinsame Laufzeit (WebGPU) wird beim ersten Sprachmodell mitgeladen und mit dem letzten wieder gelöscht. sobald es installiert ist.</template>
           <template v-else-if="model.option">
             In «Erfassen» unter «Modelle und Einstellungen»: Schalter <strong>«aktiviert»</strong> bei diesem Modell.
             <template v-if="model.requires"> Setzt die installierte {{ nameOf(model.requires) }} voraus.</template>
@@ -144,6 +147,9 @@ async function persist() {
         <div class="flex flex-wrap gap-x-5 gap-y-1 text-xs opacity-70">
           <span>{{ STAGE_TITLE[model.stage] }}</span>
           <span>{{ formatBytes(modelSize(model)) }}</span>
+          <span v-for="component in componentsOf(model)" :key="component.id" :title="component.purpose">
+            + {{ component.name }} {{ formatBytes(component.files.reduce((s, f) => s + f.size, 0)) }} (einmal für alle)
+          </span>
           <span>Lizenz {{ model.license }}</span>
           <a class="link" :href="model.source" target="_blank" rel="noopener noreferrer">Quelle: {{ model.publisher }}</a>
         </div>
@@ -151,7 +157,7 @@ async function persist() {
         <details class="text-xs">
           <summary class="cursor-pointer opacity-70">Dateien und Prüfsummen</summary>
           <ul class="mt-2 space-y-1">
-            <li v-for="file in model.files" :key="file.name" class="break-all">
+            <li v-for="file in [...componentsOf(model).flatMap(c => c.files), ...model.files]" :key="file.name" class="break-all">
               <strong>{{ file.name }}</strong> ({{ file.role }}, {{ formatBytes(file.size) }})<br />
               <span class="opacity-70">{{ file.url }}</span><br />
               <code class="opacity-70">sha256 {{ file.sha256 }}</code>
@@ -181,7 +187,7 @@ async function persist() {
               :title="connected ? '' : 'Zuerst oben «Verbinden» wählen'"
               @click="load(model)"
             >
-              Laden ({{ formatBytes(modelSize(model)) }})
+              Laden ({{ formatBytes(rows[model.id].missing || modelSize(model)) }})
             </button>
             <button
               v-if="rows[model.id].status === 'installiert'"

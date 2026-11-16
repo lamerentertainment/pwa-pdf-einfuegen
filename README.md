@@ -78,6 +78,10 @@ So ist das umgesetzt, und hier lässt es sich nachprüfen:
 - **Sprachmodelle ohne Netz** ([`src/llm/llm.worker.js`](src/llm/llm.worker.js)): transformers.js
   erhält eine eigene Abruffunktion, die nur aus dem geprüften Modellspeicher liest. Selbst im Modus
   Verbunden kann das Sprachmodell nichts nachladen; die ONNX Runtime kommt aus `/vendor`, nicht vom CDN.
+  Diese Laufzeit (27 MB) gehört nicht zur App, die beim ersten Aufruf gespeichert wird: Sie steht als
+  gemeinsamer Bestandteil mit SHA-256 im Modellkatalog
+  ([`scripts/models/pin-runtime.mjs`](scripts/models/pin-runtime.mjs), der Build prüft die Übereinstimmung),
+  kommt mit dem ersten Sprachmodell und geht mit dem letzten.
 - **Nachvollziehbarer Build**: Veröffentlicht wird nur per [GitHub Action](.github/workflows/deploy.yml)
   aus diesem Repository. Die App zeigt in der Fusszeile den Commit, aus dem sie gebaut wurde.
 

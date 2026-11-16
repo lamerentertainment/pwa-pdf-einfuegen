@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { CSP } from './csp.js';
@@ -39,6 +40,27 @@ const BUILD = buildInfo();
 // checked by the browser itself, version.json is what an update check compares against.
 const NOT_PRECACHED = new Set(['sw.js', 'sw-policy.js', 'version.json']);
 
+// Gemeinsame Modell-Bestandteile von der eigenen Website (die Laufzeit der Sprachmodelle): Sie
+// werden erst mit dem ersten Sprachmodell geladen, gehören also nicht in den App-Speicher.
+const catalog = JSON.parse(readFileSync(join(root, 'models/catalog.json'), 'utf8'));
+const ON_DEMAND = (catalog.components ?? []).flatMap(c => c.files).filter(f => f.url.startsWith('/'));
+
+/** Bricht den Build ab, wenn Katalog und ausgelieferte Datei nicht übereinstimmen. */
+function checkOnDemand(outDir) {
+    for (const file of ON_DEMAND) {
+        let buf;
+        try {
+            buf = readFileSync(join(outDir, file.url.slice(1)));
+        } catch {
+            throw new Error(`${file.url} fehlt im Build (scripts/copy-vendor.js)`);
+        }
+        const sha = createHash('sha256').update(buf).digest('hex');
+        if (sha !== file.sha256 || buf.length !== file.size) {
+            throw new Error(`${file.url} passt nicht zum Modellkatalog – node scripts/models/pin-runtime.mjs ausführen`);
+        }
+    }
+}
+
 function listFiles(dir) {
     return readdirSync(dir, { recursive: true, withFileTypes: true })
         .filter(entry => entry.isFile())
@@ -75,8 +97,10 @@ function offlineApp() {
             for (const file of listFiles(outDir)) {
                 if (/^assets\/ort-wasm[\w.-]*\.wasm$/.test(file)) rmSync(join(outDir, file));
             }
+            checkOnDemand(outDir);
+            const onDemand = new Set(ON_DEMAND.map(f => f.url.slice(1)));
             const precache = listFiles(outDir)
-                .filter(file => !NOT_PRECACHED.has(file) && !file.endsWith('.map'))
+                .filter(file => !NOT_PRECACHED.has(file) && !onDemand.has(file) && !file.endsWith('.map'))
                 .sort()
                 .map(file => `/${file}`);
             // Die App wird meist als "/" aufgerufen; die statische Route in sw.js liefert das aus dem Speicher

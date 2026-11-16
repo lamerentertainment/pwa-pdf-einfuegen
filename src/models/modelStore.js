@@ -11,8 +11,38 @@ import { isBlocked } from '../net/connection.js';
 export const MODEL_CACHE = 'models-v1'; // gleich wie in public/sw.js
 export const models = catalog.models;
 
+// Gemeinsame Bestandteile mehrerer Modelle, z. B. die Laufzeit der Sprachmodelle (27 MB). Sie
+// gehören nicht zur App, die beim ersten Aufruf gespeichert wird: Sie kommen mit dem ersten Modell,
+// das sie braucht, und gehen mit dem letzten.
+export const components = catalog.components ?? [];
+
+/** Die gemeinsamen Bestandteile eines Modells. */
+export function componentsOf(model) {
+    return (model.components ?? []).map(id => components.find(c => c.id === id)).filter(Boolean);
+}
+
+/** Alle Dateien, die ein Modell zum Laufen braucht: Bestandteile zuerst, dann die eigenen. */
+export function allFiles(model) {
+    return [...componentsOf(model).flatMap(c => c.files), ...model.files];
+}
+
 export function modelSize(model) {
     return model.files.reduce((sum, file) => sum + file.size, 0);
+}
+
+/** Bytes, die beim Laden noch fehlen (eigene Dateien und noch nicht vorhandene Bestandteile). */
+export async function missingSize(model) {
+    const cache = await caches.open(MODEL_CACHE);
+    let missing = 0;
+    for (const file of allFiles(model)) if (!(await cache.match(file.url))) missing += file.size;
+    return missing;
+}
+
+// Laufzeitdateien werden als Skript bzw. WebAssembly ausgeliefert, Modellgewichte als Daten
+function contentType(name) {
+    if (/\.m?js$/.test(name)) return 'text/javascript';
+    if (name.endsWith('.wasm')) return 'application/wasm';
+    return 'application/octet-stream';
 }
 
 export function formatBytes(bytes) {
@@ -74,14 +104,16 @@ export async function hashStream(stream, onBytes) {
 /** @returns {Promise<'installiert'|'unvollstaendig'|'fehlt'>} */
 export async function getStatus(model) {
     const cache = await caches.open(MODEL_CACHE);
-    const present = await Promise.all(model.files.map(file => cache.match(file.url)));
-    const count = present.filter(Boolean).length;
-    if (count === 0) return 'fehlt';
-    return count === model.files.length ? 'installiert' : 'unvollstaendig';
+    // Massgebend sind die eigenen Dateien; fehlt nur ein gemeinsamer Bestandteil, ist das Modell unvollständig
+    const own = (await Promise.all(model.files.map(file => cache.match(file.url)))).filter(Boolean).length;
+    if (own === 0) return 'fehlt';
+    const shared = await Promise.all(componentsOf(model).flatMap(c => c.files).map(file => cache.match(file.url)));
+    return own === model.files.length && shared.every(Boolean) ? 'installiert' : 'unvollstaendig';
 }
 
 export async function download(model, { onProgress, signal } = {}) {
-    const total = modelSize(model);
+    const files = allFiles(model);
+    const total = files.reduce((sum, file) => sum + file.size, 0);
     const { usage, quota } = await storageInfo();
     if (quota && total > quota - usage) {
         throw new Error(`Zu wenig Speicher im Browser: ${formatBytes(total)} nötig, ${formatBytes(quota - usage)} frei.`);
@@ -91,7 +123,7 @@ export async function download(model, { onProgress, signal } = {}) {
 
     const cache = await caches.open(MODEL_CACHE);
     let done = 0;
-    for (const file of model.files) {
+    for (const file of files) {
         if (await cache.match(file.url)) {
             done += file.size;
             onProgress?.(done / total);
@@ -104,7 +136,7 @@ export async function download(model, { onProgress, signal } = {}) {
         // Ein Strom geht direkt in den Speicher, der andere durch die Prüfsumme
         const [toCache, toHash] = response.body.tee();
         const stored = cache.put(file.url, new Response(toCache, {
-            headers: { 'Content-Type': 'application/octet-stream', 'Content-Length': String(file.size) },
+            headers: { 'Content-Type': contentType(file.name), 'Content-Length': String(file.size) },
         }));
         let actual;
         try {
@@ -129,7 +161,7 @@ export async function download(model, { onProgress, signal } = {}) {
 export async function verify(model) {
     const cache = await caches.open(MODEL_CACHE);
     const broken = [];
-    for (const file of model.files) {
+    for (const file of allFiles(model)) {
         const response = await cache.match(file.url);
         if (!response || (await hashStream(response.body)) !== file.sha256) broken.push(file.name);
     }
@@ -139,6 +171,12 @@ export async function verify(model) {
 export async function remove(model) {
     const cache = await caches.open(MODEL_CACHE);
     await Promise.all(model.files.map(file => cache.delete(file.url)));
+    // Bestandteile nur löschen, wenn kein anderes Modell sie noch braucht
+    for (const component of componentsOf(model)) {
+        const users = models.filter(m => m !== model && m.components?.includes(component.id));
+        const stillUsed = await Promise.all(users.map(async m => Boolean(await cache.match(m.files[0].url))));
+        if (!stillUsed.some(Boolean)) await Promise.all(component.files.map(file => cache.delete(file.url)));
+    }
 }
 
 export async function storageInfo() {

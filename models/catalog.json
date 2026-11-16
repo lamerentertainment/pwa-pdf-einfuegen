@@ -153,7 +153,10 @@
         "modelClass": "AutoModelForCausalLM",
         "dtype": "q4f16",
         "device": "webgpu"
-      }
+      },
+      "components": [
+        "llm-laufzeit"
+      ]
     },
     {
       "id": "gemma-4-e2b",
@@ -243,7 +246,10 @@
         "modelClass": "Gemma4ForCausalLM",
         "dtype": "q4f16",
         "device": "webgpu"
-      }
+      },
+      "components": [
+        "llm-laufzeit"
+      ]
     },
     {
       "id": "gemma-4-e4b",
@@ -339,7 +345,36 @@
         "modelClass": "Gemma4ForCausalLM",
         "dtype": "q4f16",
         "device": "webgpu"
-      }
+      },
+      "components": [
+        "llm-laufzeit"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "id": "llm-laufzeit",
+      "name": "Laufzeit für Sprachmodelle",
+      "purpose": "ONNX Runtime Web 1.31.0-dev.20260914-8d85527a0 mit WebGPU, gemeinsam für alle Sprachmodelle. Wird mit dem ersten Sprachmodell geladen und mit dem letzten wieder gelöscht.",
+      "license": "MIT",
+      "publisher": "Microsoft (onnxruntime-web)",
+      "source": "https://www.npmjs.com/package/onnxruntime-web/v/1.31.0-dev.20260914-8d85527a0",
+      "files": [
+        {
+          "name": "ort-wasm-simd-threaded.asyncify.mjs",
+          "role": "Laufzeit (JavaScript)",
+          "url": "/vendor/ort-1.31.0-dev.20260914-8d85527a0/ort-wasm-simd-threaded.asyncify.mjs",
+          "sha256": "0966b6105cd936744498aa60df7a22cbd47af3374dbc64a9ab561c08a71e3611",
+          "size": 53057
+        },
+        {
+          "name": "ort-wasm-simd-threaded.asyncify.wasm",
+          "role": "Laufzeit (WebAssembly)",
+          "url": "/vendor/ort-1.31.0-dev.20260914-8d85527a0/ort-wasm-simd-threaded.asyncify.wasm",
+          "sha256": "49871f5a4409519797e127440868a6d1923339d9185907f301a5b2a1d90af082",
+          "size": 26861777
+        }
+      ]
     }
   ]
 }

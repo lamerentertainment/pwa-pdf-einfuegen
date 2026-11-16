@@ -55,6 +55,31 @@ describe('Modellkatalog', () => {
     });
 });
 
+describe('Gemeinsame Bestandteile (Laufzeit der Sprachmodelle)', () => {
+    it('kommen von der eigenen Website, sind gepinnt und stimmen mit public/vendor überein', async () => {
+        const { readFileSync } = await import('node:fs');
+        const { createHash } = await import('node:crypto');
+        expect(catalog.components.length).toBeGreaterThan(0);
+        for (const file of catalog.components.flatMap(c => c.files)) {
+            expect(file.url).toMatch(/^\/vendor\/ort-[\w.-]+\//);
+            const buf = readFileSync(new URL(`../public${file.url}`, import.meta.url));
+            expect(createHash('sha256').update(buf).digest('hex'), file.url).toBe(file.sha256);
+            expect(buf.length).toBe(file.size);
+            // Laden nur im Modus «verbunden», danach aus dem Speicher
+            expect(policy.decide({ url: `https://app.example${file.url}`, origin: 'https://app.example', method: 'GET', mode: 'verbunden' }).allow).toBe(true);
+            expect(policy.decide({ url: `https://app.example${file.url}`, origin: 'https://app.example', method: 'GET', mode: 'lokal' }).allow).toBe(false);
+        }
+    });
+
+    it('werden von jedem Sprachmodell verwendet, und nur von bekannten IDs', () => {
+        const ids = new Set(catalog.components.map(c => c.id));
+        for (const model of catalog.models) {
+            for (const id of model.components ?? []) expect(ids.has(id), model.id).toBe(true);
+            if (model.stage === 3) expect(model.components, model.id).toContain('llm-laufzeit');
+        }
+    });
+});
+
 describe('Beispieldokumente', () => {
     it('liegen alle in public/beispiele', async () => {
         const { EXAMPLES } = await import('../src/capture/examples.js');

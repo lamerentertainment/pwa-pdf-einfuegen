@@ -34,6 +34,8 @@ await copy(join(modules, 'onnxruntime-web/dist'), join(vendor, `ort-${ort}`), [
 
 // ONNX Runtime der Sprachmodelle (Stufe 3): transformers.js bringt eine eigene, neuere Version mit
 // und nutzt für WebGPU die «asyncify»-Variante. Ohne eigene Kopie käme sie vom CDN jsDelivr.
+// Sie gehört nicht zum App-Speicher, sondern wird erst mit dem ersten Sprachmodell geladen
+// (Modellkatalog «components», Prüfsumme: scripts/models/pin-runtime.mjs).
 const llmOrtDir = join(modules, '@huggingface/transformers/node_modules/onnxruntime-web');
 const llmOrt = JSON.parse(await readFile(join(llmOrtDir, 'package.json'), 'utf8')).version;
 await copy(join(llmOrtDir, 'dist'), join(vendor, `ort-${llmOrt}`), [

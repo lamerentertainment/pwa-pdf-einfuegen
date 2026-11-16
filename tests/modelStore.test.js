@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, modelSize, readWithProgress, sha256Hex } from '../src/models/modelStore.js';
+import { allFiles, componentsOf, formatBytes, models, modelSize, readWithProgress, sha256Hex } from '../src/models/modelStore.js';
 
 describe('sha256Hex', () => {
     it('berechnet die bekannte Prüfsumme', async () => {
@@ -49,5 +49,45 @@ describe('hashStream', () => {
         const { hashStream } = await import('../src/models/modelStore.js');
         expect(await hashStream(stream, n => seen.push(n))).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
         expect(seen).toEqual([1, 2, 3]);
+    });
+});
+
+describe('Bestandteile', () => {
+    it('stellt die Laufzeit vor die Dateien eines Sprachmodells, nicht bei der Texterkennung', () => {
+        const llm = models.find(m => m.stage === 3);
+        const ocr = models.find(m => m.stage === 1);
+        expect(componentsOf(llm).map(c => c.id)).toEqual(['llm-laufzeit']);
+        expect(allFiles(llm)[0].url).toMatch(/^\/vendor\//);
+        expect(allFiles(llm)).toHaveLength(llm.files.length + 2);
+        expect(allFiles(ocr)).toEqual(ocr.files);
+    });
+});
+
+describe('Löschen mit gemeinsamer Laufzeit', () => {
+    // Einfacher Ersatz für die Cache Storage API
+    function fakeCaches(urls) {
+        const store = new Set(urls);
+        const cache = {
+            match: async url => (store.has(url) ? new Response('x') : undefined),
+            delete: async url => store.delete(url),
+        };
+        return { store, api: { open: async () => cache } };
+    }
+
+    it('behält die Laufzeit, solange ein anderes Sprachmodell sie braucht, und löscht sie mit dem letzten', async () => {
+        const { remove } = await import('../src/models/modelStore.js');
+        const [a, b] = models.filter(m => m.stage === 3);
+        const runtime = componentsOf(a)[0].files.map(f => f.url);
+        const { store, api } = fakeCaches([...allFiles(a), ...b.files].map(f => f.url));
+        globalThis.caches = api;
+        try {
+            await remove(a);
+            expect(runtime.every(u => store.has(u))).toBe(true);
+            expect(a.files.some(f => store.has(f.url))).toBe(false);
+            await remove(b);
+            expect(store.size).toBe(0);
+        } finally {
+            delete globalThis.caches;
+        }
     });
 });
