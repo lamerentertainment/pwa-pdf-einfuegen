@@ -173,6 +173,8 @@ function nextUncertain() {
 
 // --- Layoutbereiche bearbeiten -------------------------------------------------------------
 const hasLayout = computed(() => pages.value.some(p => p.layout));
+// «Unsichere Zeilen markieren» wirkt nur auf Seiten aus der Texterkennung (nur sie haben eine Sicherheit)
+const hasOcr = computed(() => pages.value.some(p => p.source?.startsWith('ocr')));
 const regionMode = ref(false);
 const selection = ref([]); // [{ page, id }], auch über Seiten hinweg
 const orderMode = ref(false);
@@ -425,7 +427,10 @@ function reset() {
           <label class="flex items-center gap-2"><input v-model="draft.lists" type="checkbox" class="checkbox checkbox-xs" /> Aufzählungen als Markdown-Listen</label>
           <label class="flex items-center gap-2"><input v-model="draft.structure" type="checkbox" class="checkbox checkbox-xs" /> Einrückungen und Spalten-Text erhalten</label>
           <label class="flex items-center gap-2"><input v-model="draft.keepLineNumbers" type="checkbox" class="checkbox checkbox-xs" /> Zeilennummern am Rand behalten</label>
-          <label class="flex items-center gap-2"><input v-model="draft.markUncertain" type="checkbox" class="checkbox checkbox-xs" /> Unsichere Zeilen mit [?] markieren</label>
+          <label class="flex items-center gap-2" :class="{ 'opacity-50': !hasOcr }" :title="hasOcr ? 'Wirkt nur auf Seiten aus der Texterkennung' : 'Keine Seite dieses Dokuments stammt aus der Texterkennung'">
+            <input v-model="draft.markUncertain" type="checkbox" class="checkbox checkbox-xs" :disabled="!hasOcr" /> Unsichere Zeilen mit [?] markieren
+            <span v-if="!hasOcr" class="text-xs opacity-70">(nur bei Texterkennung)</span>
+          </label>
           <template v-if="hasLayout">
             <p class="mt-1 text-xs font-semibold uppercase tracking-wide opacity-60">Seiten mit Layoutmodell</p>
             <label class="flex items-center gap-2"><input v-model="draft.headings" type="checkbox" class="checkbox checkbox-xs" /> Überschriften mit # kennzeichnen</label>
