@@ -7,6 +7,7 @@ import { processState } from '../process/processStore.js';
 import { formatBytes, modelSize } from '../models/modelStore.js';
 import llm, { checkWebGPU, fillPrompt, installedLlms, LLM_MODELS, PRESET_SOURCE, PRESETS } from '../llm/llmService.js';
 import { usePreference } from '../components/usePreference.js';
+import LineBreakBackdrop from '../components/LineBreakBackdrop.vue';
 
 const emit = defineEmits(['navigate']);
 
@@ -14,6 +15,11 @@ const gpu = ref(null); // { ok, name } | { ok: false, reason }
 const installed = ref([]);
 const modelId = usePreference('transformieren.modell', '');
 const presetId = usePreference('transformieren.preset', PRESETS[0].id);
+// Zeilenumbrüche in den Textfeldern als graue Zeichen (↵) anzeigen, nur Anzeige
+const showBreaks = usePreference('transformieren.umbrueche', true);
+const promptEl = ref(null);
+const inputEl = ref(null);
+const outputEl = ref(null);
 const promptTemplate = ref('');
 const input = ref('');
 const output = ref('');
@@ -156,12 +162,17 @@ function download() {
             <p class="text-xs opacity-70">{{ preset.description }}</p>
             <details class="text-sm">
               <summary class="cursor-pointer select-none text-xs">Prompt ansehen und anpassen{{ promptEdited ? ' (angepasst)' : '' }}</summary>
-              <textarea
-                v-model="promptTemplate"
-                class="textarea mt-2 h-64 w-full resize-y font-mono text-xs leading-5"
-                spellcheck="false"
-                aria-label="Prompt der Vorlage"
-              />
+              <div class="relative mt-2">
+                <LineBreakBackdrop v-if="showBreaks" :target="promptEl" :text="promptTemplate" />
+                <textarea
+                  ref="promptEl"
+                  v-model="promptTemplate"
+                  class="textarea relative h-64 w-full resize-y font-mono text-xs leading-5 [scrollbar-gutter:stable]"
+                  :class="{ 'bg-transparent': showBreaks }"
+                  spellcheck="false"
+                  aria-label="Prompt der Vorlage"
+                />
+              </div>
               <div class="flex flex-wrap items-center gap-3 text-xs opacity-70">
                 <span><code v-pre>{{INPUT}}</code> steht für den Eingabetext.</span>
                 <button v-if="promptEdited" class="link" @click="promptTemplate = preset.prompt">Original wiederherstellen</button>
@@ -177,19 +188,27 @@ function download() {
         <div class="card-body gap-2 p-4">
           <div class="flex flex-wrap items-center gap-2">
             <h3 class="font-semibold">Eingabe</h3>
+            <label class="flex items-center gap-1.5 text-xs opacity-80" title="Zeigt jeden Zeilenumbruch als graues ↵ (nur Anzeige, der Text bleibt unverändert)">
+              <input v-model="showBreaks" type="checkbox" class="checkbox checkbox-xs" /> Umbrüche ↵
+            </label>
             <div class="ml-auto flex flex-wrap gap-2">
               <button v-if="documentState.pages.length" class="btn btn-xs" @click="fromStage1"><DocumentArrowDownIcon class="size-4" /> Aus Stufe 1</button>
               <button v-if="processState.output" class="btn btn-xs" @click="fromStage2"><DocumentArrowDownIcon class="size-4" /> Aus Stufe 2</button>
               <button v-if="input" class="btn btn-xs btn-ghost" @click="input = ''">Leeren</button>
             </div>
           </div>
-          <textarea
-            v-model="input"
-            class="textarea h-[50vh] min-h-48 w-full resize-y font-mono text-sm leading-6"
-            placeholder="Text, den das Sprachmodell umformen soll …"
-            spellcheck="false"
-            aria-label="Eingabe für das Sprachmodell"
-          />
+          <div class="relative">
+            <LineBreakBackdrop v-if="showBreaks" :target="inputEl" :text="input" />
+            <textarea
+              ref="inputEl"
+              v-model="input"
+              class="textarea relative h-[50vh] min-h-48 w-full resize-y font-mono text-sm leading-6 [scrollbar-gutter:stable]"
+              :class="{ 'bg-transparent': showBreaks }"
+              placeholder="Text, den das Sprachmodell umformen soll …"
+              spellcheck="false"
+              aria-label="Eingabe für das Sprachmodell"
+            />
+          </div>
           <div class="flex flex-wrap items-center gap-3">
             <button v-if="phase === 'idle'" class="btn btn-primary btn-sm" :disabled="!canRun" @click="run">
               <SparklesIcon class="size-4" /> Umformen
@@ -208,6 +227,9 @@ function download() {
         <div class="card-body gap-2 p-4">
           <div class="flex flex-wrap items-center gap-2">
             <h3 class="font-semibold">Ergebnis</h3>
+            <label class="flex items-center gap-1.5 text-xs opacity-80" title="Zeigt jeden Zeilenumbruch als graues ↵ (nur Anzeige, der Text bleibt unverändert)">
+              <input v-model="showBreaks" type="checkbox" class="checkbox checkbox-xs" /> Umbrüche ↵
+            </label>
             <span v-if="stats" class="text-xs opacity-70">
               {{ stats.tokens }} Tokens in {{ (stats.ms / 1000).toFixed(1) }} s ({{ (stats.tokens / (stats.ms / 1000)).toFixed(1) }} pro Sekunde){{ stats.stopped ? ', gestoppt' : '' }}
             </span>
@@ -219,13 +241,18 @@ function download() {
             </div>
           </div>
           <p v-if="error" class="text-sm text-error">{{ error }}</p>
-          <textarea
-            v-model="output"
-            class="textarea h-[50vh] min-h-48 w-full resize-y font-mono text-sm leading-6"
-            :readonly="phase !== 'idle'"
-            spellcheck="false"
-            aria-label="Ergebnis des Sprachmodells"
-          />
+          <div class="relative">
+            <LineBreakBackdrop v-if="showBreaks" :target="outputEl" :text="output" />
+            <textarea
+              ref="outputEl"
+              v-model="output"
+              class="textarea relative h-[50vh] min-h-48 w-full resize-y font-mono text-sm leading-6 [scrollbar-gutter:stable]"
+              :class="{ 'bg-transparent': showBreaks }"
+              :readonly="phase !== 'idle'"
+              spellcheck="false"
+              aria-label="Ergebnis des Sprachmodells"
+            />
+          </div>
           <p class="text-xs opacity-60">Entwurf eines Sprachmodells: auf Vollständigkeit und Richtigkeit prüfen, bevor du ihn verwendest.</p>
         </div>
       </section>

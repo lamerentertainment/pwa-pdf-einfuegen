@@ -4,6 +4,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import PageView from './PageView.vue';
+import LineBreakBackdrop from './LineBreakBackdrop.vue';
 import RegionPanel from './RegionPanel.vue';
 import {
     defaultOrder, mergeGroups, moveInOrder, orderFromClicks,
@@ -37,6 +38,8 @@ const layout = useResizable('pruefansicht', { ratio: 0.5 });
 // Linien, Listen, Überschriften)
 const view = usePreference('pruefansicht.ansicht', 'text');
 const wrapLines = usePreference('pruefansicht.umbruch', true);
+// Zeilenumbrüche als graue Zeichen (↵) anzeigen, nur Anzeige
+const showBreaks = usePreference('pruefansicht.umbrueche', true);
 const rendered = computed(() => (view.value === 'markdown' ? renderMarkdown(page.value.text) : ''));
 const pageHasTable = computed(() => hasMarkdownTable(page.value.text));
 
@@ -381,6 +384,9 @@ function reset() {
       <label v-if="view === 'text'" class="flex items-center gap-2">
         <input v-model="wrapLines" type="checkbox" class="checkbox checkbox-xs" /> Zeilen umbrechen
       </label>
+      <label v-if="view === 'text'" class="flex items-center gap-2" title="Zeigt jeden Zeilenumbruch als graues ↵ (nur Anzeige, der Text bleibt unverändert)">
+        <input v-model="showBreaks" type="checkbox" class="checkbox checkbox-xs" /> Umbrüche ↵
+      </label>
       <details ref="recaptureMenu" class="ml-auto" data-testid="neu-erfassen" @toggle="prepareRecapture">
         <summary class="cursor-pointer select-none">Seite neu erfassen</summary>
         <div class="mt-2 flex flex-col gap-1.5 rounded-box border border-base-300 bg-base-100 p-3">
@@ -523,18 +529,20 @@ function reset() {
           />
           <p v-if="documentState.options.tables && !pageHasTable" class="text-xs opacity-60">Auf dieser Seite wurde keine Tabelle erkannt.</p>
         </template>
-        <textarea
-          v-else
-          ref="textarea"
-          v-model="page.text"
-          class="textarea min-h-0 w-full flex-1 resize-none font-mono text-sm leading-6"
-          :class="{ 'overflow-x-auto whitespace-pre': !wrapLines }"
-          :wrap="wrapLines ? 'soft' : 'off'"
-          spellcheck="false"
-          :aria-label="`Text von Seite ${page.number}`"
-          @click="syncFromText"
-          @keyup="syncFromText"
-        />
+        <div v-else class="relative flex min-h-0 flex-1 flex-col">
+          <LineBreakBackdrop v-if="showBreaks" :target="textarea" :text="page.text" />
+          <textarea
+            ref="textarea"
+            v-model="page.text"
+            class="textarea relative min-h-0 w-full flex-1 resize-none font-mono text-sm leading-6 [scrollbar-gutter:stable]"
+            :class="{ 'overflow-x-auto whitespace-pre': !wrapLines, 'bg-transparent': showBreaks }"
+            :wrap="wrapLines ? 'soft' : 'off'"
+            spellcheck="false"
+            :aria-label="`Text von Seite ${page.number}`"
+            @click="syncFromText"
+            @keyup="syncFromText"
+          />
+        </div>
         <div class="flex flex-wrap items-center gap-2 text-xs">
           <span v-if="hint" class="text-warning">{{ hint }}</span>
           <button v-if="edited" class="btn btn-xs btn-ghost ml-auto" @click="reset">Änderungen dieser Seite verwerfen</button>

@@ -23,6 +23,8 @@ function sync() {
     const style = getComputedStyle(el);
     for (const prop of MIRRORED) box.style[prop] = style[prop];
     Object.assign(box.style, {
+        // Felder mit wrap="off" (Prüfansicht ohne «Zeilen umbrechen») brechen nicht um
+        whiteSpace: el.getAttribute('wrap') === 'off' ? 'pre' : 'pre-wrap',
         top: `${el.offsetTop}px`,
         left: `${el.offsetLeft}px`,
         width: `${el.offsetWidth}px`,
@@ -30,10 +32,13 @@ function sync() {
         borderColor: 'transparent',
     });
     box.scrollTop = el.scrollTop;
+    box.scrollLeft = el.scrollLeft;
 }
 
 function onScroll() {
-    if (backdrop.value && props.target) backdrop.value.scrollTop = props.target.scrollTop;
+    if (!backdrop.value || !props.target) return;
+    backdrop.value.scrollTop = props.target.scrollTop;
+    backdrop.value.scrollLeft = props.target.scrollLeft;
 }
 
 function attach(el, old) {
@@ -50,6 +55,13 @@ onMounted(() => attach(props.target));
 watch(() => props.target, attach);
 // Nach einer Eingabe kann sich die Bildlaufposition ändern (neue Zeile am Ende)
 watch(() => props.text, () => requestAnimationFrame(sync));
+// Umbruch des Felds umgeschaltet (wrap-Attribut): das ändert seine Grösse nicht
+const observeWrap = new MutationObserver(() => requestAnimationFrame(sync));
+watch(() => props.target, el => {
+    observeWrap.disconnect();
+    if (el) observeWrap.observe(el, { attributes: true, attributeFilter: ['wrap', 'class'] });
+}, { immediate: true });
+onBeforeUnmount(() => observeWrap.disconnect());
 onBeforeUnmount(() => attach(null, props.target));
 </script>
 

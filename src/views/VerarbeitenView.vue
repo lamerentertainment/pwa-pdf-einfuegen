@@ -61,7 +61,7 @@ const changedCount = computed(() => tokens.value?.filter(t => t.changed).length 
 
 // --- Klick auf eine Stelle: entsprechende Stelle im anderen Feld auf dieselbe Höhe setzen ---
 const inputEl = ref(null);
-// Zeilenumbrüche der Eingabe als graue Zeichen anzeigen (Standard: an, vom Browser gemerkt)
+// Zeilenumbrüche von Eingabe und Ergebnis als graue Zeichen anzeigen (Standard: an, vom Browser gemerkt)
 const showBreaks = usePreference('verarbeiten.umbrueche', true);
 const outputEl = ref(null); // Textfeld oder hervorgehobene Ansicht
 const inputBox = ref(null);
@@ -208,6 +208,9 @@ function download() {
         <div class="card-body gap-2 p-4">
           <div class="flex flex-wrap items-center gap-2">
             <h3 class="font-semibold">Ergebnis</h3>
+            <label v-if="!(highlight && tokens)" class="flex items-center gap-1.5 text-xs opacity-80" title="Zeigt jeden Zeilenumbruch als graues ↵ (nur Anzeige, der Text bleibt unverändert)">
+              <input v-model="showBreaks" type="checkbox" class="checkbox checkbox-xs" /> Umbrüche ↵
+            </label>
             <span v-if="highlight && tokens" class="text-xs opacity-70">{{ changedCount }} Wörter verändert</span>
             <div class="ml-auto flex gap-2">
               <button class="btn btn-xs" :disabled="!output" @click="copy">
@@ -232,11 +235,13 @@ function download() {
               :data-start="token.start"
               :class="{ 'rounded bg-warning/25': token.changed, 'flash-word': token.start === flashStart }"
             >{{ token.text }}</span><template v-else>{{ token.text }}</template></template></div>
+            <LineBreakBackdrop v-if="showBreaks && !(highlight && tokens)" :target="outputEl" :text="output" />
             <textarea
-              v-else
+              v-if="!(highlight && tokens)"
               ref="outputEl"
               v-model="output"
-              class="textarea h-[65vh] min-h-48 w-full resize-y font-mono text-sm leading-6"
+              class="textarea relative h-[65vh] min-h-48 w-full resize-y font-mono text-sm leading-6 [scrollbar-gutter:stable]"
+              :class="{ 'bg-transparent': showBreaks }"
               spellcheck="false"
               aria-label="Ergebnis"
               @click="onOutputTextClick"
