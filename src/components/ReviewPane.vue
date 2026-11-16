@@ -371,7 +371,7 @@ function reset() {
       </div>
     </div>
 
-    <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs opacity-70">
+    <div v-if="showBoxes" class="flex flex-wrap gap-x-4 gap-y-1 text-xs opacity-70">
       <span><span class="legend border-blue-500/60" /> eingebetteter Text</span>
       <span><span class="legend border-green-600/60" /> erkannt</span>
       <span><span class="legend border-orange-600 bg-orange-500/20" /> unsicher erkannt (unter {{ Math.round(UNCERTAIN_SCORE * 100) }} %)</span>
@@ -379,47 +379,6 @@ function reset() {
     </div>
 
     <div class="flex flex-wrap items-start gap-x-5 gap-y-2 text-sm">
-      <div class="join" role="radiogroup" aria-label="Darstellung des Texts">
-        <button class="btn btn-xs join-item" :class="{ 'btn-primary': view === 'text' }" role="radio" :aria-checked="view === 'text'" @click="view = 'text'">Text</button>
-        <button class="btn btn-xs join-item" :class="{ 'btn-primary': view === 'markdown' }" role="radio" :aria-checked="view === 'markdown'" title="Zeigt das Markdown formatiert an: Tabellen, Überschriften und Listen" @click="view = 'markdown'">Formatiert</button>
-      </div>
-      <label v-if="view === 'text'" class="flex items-center gap-2">
-        <input v-model="wrapLines" type="checkbox" class="checkbox checkbox-xs" /> Zeilen umbrechen
-      </label>
-      <label v-if="view === 'text'" class="flex items-center gap-2" title="Zeigt jeden Zeilenumbruch als graues ↵ (nur Anzeige, der Text bleibt unverändert)">
-        <input v-model="showBreaks" type="checkbox" class="checkbox checkbox-xs" /> Umbrüche ↵
-      </label>
-      <details ref="recaptureMenu" class="ml-auto" data-testid="neu-erfassen" @toggle="prepareRecapture">
-        <summary class="cursor-pointer select-none">Seite neu erfassen</summary>
-        <div class="mt-2 flex flex-col gap-1.5 rounded-box border border-base-300 bg-base-100 p-3">
-          <p class="text-xs opacity-70">Seite {{ page.number }} mit anderer Einstellung erfassen. Die übrigen Seiten bleiben, wie sie sind.</p>
-          <label
-            v-for="option in RECAPTURE_OPTIONS"
-            :key="option.mode"
-            class="flex items-center gap-2"
-            :class="{ 'opacity-50': !recaptureAvailable(option.mode) }"
-          >
-            <input v-model="recapture.mode" type="radio" name="neu-erfassen" class="radio radio-xs" :value="option.mode" :disabled="!recaptureAvailable(option.mode)" />
-            {{ option.text }}
-            <span v-if="option.mode === page.source" class="text-xs opacity-60">(bisher)</span>
-            <span v-else-if="!recaptureAvailable(option.mode)" class="text-xs opacity-60">(Modell nicht installiert)</span>
-          </label>
-          <label v-if="recapture.mode !== 'text'" class="flex items-center gap-2">
-            Auflösung
-            <select v-model.number="recapture.dpi" class="select select-xs w-auto" aria-label="Auflösung der Texterkennung">
-              <option :value="150">150 dpi (Standard)</option>
-              <option :value="300">300 dpi (feiner, langsamer)</option>
-            </select>
-          </label>
-          <p v-if="recapture.confirm" class="text-xs text-warning">Deine Bearbeitungen dieser Seite gehen dabei verloren. Nochmals klicken zum Bestätigen.</p>
-          <p v-if="recapture.error" class="text-xs text-error">{{ recapture.error }}</p>
-          <p v-if="recaptureRunning" class="text-xs">{{ recaptureRunning.status || 'Wird neu erfasst …' }}</p>
-          <button class="btn btn-xs btn-primary self-start" :disabled="Boolean(recaptureRunning) || !recaptureAvailable(recapture.mode)" @click="runRecapture">
-            <span v-if="recaptureRunning" class="loading loading-spinner loading-xs" />
-            {{ recapture.confirm ? 'Trotzdem neu erfassen' : 'Seite neu erfassen' }}
-          </button>
-        </div>
-      </details>
       <details @toggle="event => event.target.open || cancelRelayout()">
         <summary class="cursor-pointer select-none">Textaufbau anpassen</summary>
         <div class="mt-2 flex flex-col gap-1.5 rounded-box border border-base-300 bg-base-100 p-3">
@@ -451,6 +410,49 @@ function reset() {
           </button>
         </div>
       </details>
+      <details ref="recaptureMenu" data-testid="neu-erfassen" @toggle="prepareRecapture">
+        <summary class="cursor-pointer select-none">Seite neu erfassen</summary>
+        <div class="mt-2 flex flex-col gap-1.5 rounded-box border border-base-300 bg-base-100 p-3">
+          <p class="text-xs opacity-70">Seite {{ page.number }} mit anderer Einstellung erfassen. Die übrigen Seiten bleiben, wie sie sind.</p>
+          <label
+            v-for="option in RECAPTURE_OPTIONS"
+            :key="option.mode"
+            class="flex items-center gap-2"
+            :class="{ 'opacity-50': !recaptureAvailable(option.mode) }"
+          >
+            <input v-model="recapture.mode" type="radio" name="neu-erfassen" class="radio radio-xs" :value="option.mode" :disabled="!recaptureAvailable(option.mode)" />
+            {{ option.text }}
+            <span v-if="option.mode === page.source" class="text-xs opacity-60">(bisher)</span>
+            <span v-else-if="!recaptureAvailable(option.mode)" class="text-xs opacity-60">(Modell nicht installiert)</span>
+          </label>
+          <label v-if="recapture.mode !== 'text'" class="flex items-center gap-2">
+            Auflösung
+            <select v-model.number="recapture.dpi" class="select select-xs w-auto" aria-label="Auflösung der Texterkennung">
+              <option :value="150">150 dpi (Standard)</option>
+              <option :value="300">300 dpi (feiner, langsamer)</option>
+            </select>
+          </label>
+          <p v-if="recapture.confirm" class="text-xs text-warning">Deine Bearbeitungen dieser Seite gehen dabei verloren. Nochmals klicken zum Bestätigen.</p>
+          <p v-if="recapture.error" class="text-xs text-error">{{ recapture.error }}</p>
+          <p v-if="recaptureRunning" class="text-xs">{{ recaptureRunning.status || 'Wird neu erfasst …' }}</p>
+          <button class="btn btn-xs btn-primary self-start" :disabled="Boolean(recaptureRunning) || !recaptureAvailable(recapture.mode)" @click="runRecapture">
+            <span v-if="recaptureRunning" class="loading loading-spinner loading-xs" />
+            {{ recapture.confirm ? 'Trotzdem neu erfassen' : 'Seite neu erfassen' }}
+          </button>
+        </div>
+      </details>
+      <div class="ml-auto flex flex-wrap items-center gap-x-5 gap-y-2">
+        <label v-if="view === 'text'" class="flex items-center gap-2" title="Zeigt jeden Zeilenumbruch als graues ↵ (nur Anzeige, der Text bleibt unverändert)">
+          <input v-model="showBreaks" type="checkbox" class="checkbox checkbox-xs" /> Umbrüche ↵
+        </label>
+        <label v-if="view === 'text'" class="flex items-center gap-2">
+          <input v-model="wrapLines" type="checkbox" class="checkbox checkbox-xs" /> Zeilen umbrechen
+        </label>
+        <div class="join" role="radiogroup" aria-label="Darstellung des Texts">
+          <button class="btn btn-xs join-item" :class="{ 'btn-primary': view === 'text' }" role="radio" :aria-checked="view === 'text'" @click="view = 'text'">Text</button>
+          <button class="btn btn-xs join-item" :class="{ 'btn-primary': view === 'markdown' }" role="radio" :aria-checked="view === 'markdown'" title="Zeigt das Markdown formatiert an: Tabellen, Überschriften und Listen" @click="view = 'markdown'">Formatiert</button>
+        </div>
+      </div>
     </div>
 
     <!-- Breit: PDF und Text nebeneinander, Trenner seitlich und Höhe unten ziehbar.
