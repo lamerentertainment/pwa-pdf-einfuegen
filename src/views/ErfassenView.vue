@@ -147,12 +147,12 @@ function noticeText(notice) {
                 :class="isInstalled(model) ? 'border-success/40 bg-success/5' : 'border-base-300'"
                 :data-model="model.id"
               >
-                <div class="flex flex-wrap items-start justify-between gap-2">
-                  <div>
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
                     <p class="font-medium">{{ model.name }}</p>
                     <p class="text-xs opacity-70">{{ model.purpose }} {{ formatBytes(modelSize(model)) }}.</p>
                   </div>
-                  <div class="flex flex-wrap items-center gap-3">
+                  <div class="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
                     <span class="badge badge-sm whitespace-nowrap" :class="isInstalled(model) ? 'badge-success' : 'badge-warning'">
                       {{ isInstalled(model) ? '✓ installiert' : 'nicht installiert' }}
                     </span>

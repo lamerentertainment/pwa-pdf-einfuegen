@@ -175,7 +175,7 @@ function download() {
             <strong>Als Aussage (Mann/Frau)</strong> (zusätzlich): in die indirekte Rede umwandeln, also erste in dritte
             Person und Verben in den Konjunktiv, auch im Präteritum («Ich bin unschuldig» →
             «{{ mode === 'frau' ? 'Sie' : 'Er' }} sei unschuldig», «Ich ging nach Hause» → «{{ mode === 'frau' ? 'Sie' : 'Er' }} sei nach Hause gegangen»).
-            Das geht nur mit Wortlisten: Das Ergebnis immer prüfen und meist überarbeiten.
+            Das basiert auf fest einprogrammierten Worttransformationen: Das Ergebnis immer prüfen und meist überarbeiten.
           </li>
           <li>
             <strong>Fundstellen erkennen</strong> (immer, neu): Bundesgerichtsentscheide (Geschäftsnummern wie
