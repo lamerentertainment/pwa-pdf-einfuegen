@@ -1,11 +1,12 @@
 <script setup>
 import { computed, nextTick, reactive, ref, toRef, watch } from 'vue';
-import { ArrowDownTrayIcon, ClipboardDocumentIcon, DocumentArrowDownIcon } from '@heroicons/vue/24/outline';
+import { ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, ClipboardDocumentIcon, DocumentArrowDownIcon } from '@heroicons/vue/24/outline';
 import { documentState } from '../capture/documentStore.js';
 import { joinPages } from '../capture/joinPages.js';
 import { MODES, processText, WORDLIST_SOURCE } from '../process/rules.js';
 import { diffParagraphs } from '../process/diff.js';
 import { mapPosition } from '../process/align.js';
+import { findCitations } from '../process/citations.js';
 import { processState } from '../process/processStore.js';
 import LineBreakBackdrop from '../components/LineBreakBackdrop.vue';
 import { usePreference } from '../components/usePreference.js';
@@ -57,6 +58,14 @@ const tokens = computed(() => {
         return { ...token, start: at, end: cursor, word: !/^\s+$/.test(token.text) };
     });
 });
+// Erkannte Fundstellen (wie die Makros «BGerAufruf» und «GesetzAufruf»): im Ergebnis, weil dort
+// Zeilenumbrüche und Worttrennungen bereinigt sind; solange es keines gibt, in der Eingabe
+const citations = computed(() => findCitations(output.value || input.value));
+const citationGroups = computed(() => [
+    { title: 'Bundesgerichtsentscheide', site: 'bger.li', items: citations.value.filter(c => c.kind !== 'artikel') },
+    { title: 'Gesetzesartikel', site: 'fedlex.admin.ch', items: citations.value.filter(c => c.kind === 'artikel') },
+].filter(group => group.items.length));
+
 const changedCount = computed(() => tokens.value?.filter(t => t.changed).length ?? 0);
 
 // --- Klick auf eine Stelle: entsprechende Stelle im anderen Feld auf dieselbe Höhe setzen ---
@@ -255,6 +264,33 @@ function download() {
         </div>
       </section>
     </div>
+
+    <section v-if="citationGroups.length" class="card bg-base-100 shadow-sm" aria-label="Fundstellen">
+      <div class="card-body gap-3 p-4">
+        <div class="flex flex-wrap items-baseline gap-x-3">
+          <h3 class="font-semibold">Fundstellen</h3>
+          <span class="text-xs opacity-70">
+            Automatisch erkannt. Ein Klick öffnet die Fundstelle in einem neuen Tab; dabei wird nur sie übertragen, nicht der Text.
+          </span>
+        </div>
+        <div v-for="group in citationGroups" :key="group.title" class="flex flex-wrap items-center gap-2">
+          <span class="w-full text-xs font-medium opacity-70 sm:w-56">{{ group.title }} <span class="font-normal">({{ group.site }})</span></span>
+          <a
+            v-for="item in group.items"
+            :key="item.label"
+            class="btn btn-xs btn-outline"
+            :href="item.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            :title="`${item.label} auf ${group.site} öffnen`"
+          >
+            {{ item.label }}
+            <span v-if="item.count > 1" class="badge badge-xs badge-ghost">{{ item.count }}×</span>
+            <ArrowTopRightOnSquareIcon class="size-3.5 opacity-60" />
+          </a>
+        </div>
+      </div>
+    </section>
 
     <p class="text-xs opacity-60">
       Tipp: Ein Klick auf eine Stelle in einem Feld setzt die entsprechende Stelle im anderen Feld auf dieselbe Höhe.
