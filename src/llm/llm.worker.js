@@ -1,7 +1,7 @@
 // Führt ein lokales Sprachmodell (transformers.js, WebGPU) in einem eigenen Thread aus.
 //
 // Die Modelldateien kommen ausschliesslich aus dem geprüften Modellspeicher des Browsers
-// (Cache Storage, gefüllt auf der Seite «Modelle»): transformers.js darf nichts aus dem Netz laden
+// (Cache Storage, gefüllt auf der Seite «Modelle/Programmupdate»): transformers.js darf nichts aus dem Netz laden
 // und nichts selbst speichern. Fehlt eine Datei, schlägt das Laden mit einer Meldung fehl.
 //
 // Protokoll (jede Nachricht trägt eine id):

@@ -123,7 +123,7 @@ function noticeText(notice) {
     <!-- Datei wählen -->
     <section v-if="!hasDocument" class="card bg-base-100 shadow-sm">
       <div class="card-body gap-4">
-        <h2 class="card-title">Stufe 1 · PDF erfassen</h2>
+        <h2 class="card-title">1 · PDF-Seiten (mit Text- und/oder Layouterkennung) erfassen</h2>
         <p class="text-sm opacity-80">
           Digitale Seiten liefern ihren Text direkt. Gescannte Seiten werden mit der lokalen Texterkennung gelesen.
           Danach stehen PDF und Text nebeneinander, damit du die Erfassung prüfen und korrigieren kannst.

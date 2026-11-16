@@ -117,7 +117,7 @@ function download() {
   <div class="space-y-4">
     <section class="card bg-base-100 shadow-sm">
       <div class="card-body gap-4">
-        <h2 class="card-title">Stufe 3 · Mit Sprachmodell umformen</h2>
+        <h2 class="card-title">3 · Text mit lokalen Mini-LLMs transformieren</h2>
         <p class="text-sm opacity-80">
           Ein kleines Sprachmodell formt den Text nach einer Vorlage um, etwa in die indirekte Rede oder als Zusammenfassung.
           Es läuft vollständig in diesem Browser auf der Grafikkarte, ohne Internet. Das Ergebnis ist ein Entwurf und muss immer geprüft werden.

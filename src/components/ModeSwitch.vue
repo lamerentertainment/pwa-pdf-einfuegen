@@ -61,7 +61,7 @@ async function disconnect() {
         <p class="mt-3 text-sm">Im Modus <strong>Verbunden</strong> darf die App:</p>
         <ul class="mt-1 list-disc pl-5 text-sm">
           <li>nach einer neuen App-Version suchen und sie laden, wenn du das willst,</li>
-          <li>Modelle laden, die du auf der Seite <em>Modelle</em> auswählst.</li>
+          <li>Modelle laden, die du auf der Seite <em>Modelle/Programmupdate</em> auswählst.</li>
         </ul>
         <p class="mt-3 text-sm">
           Deine Dokumente verlassen den Browser nie. Die App sendet keine Daten, sie ruft nur ab.

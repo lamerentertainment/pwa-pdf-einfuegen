@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onActivated, onMounted, reactive, ref } from 'vue';
-import { connection } from '../net/connection.js';
+import {
+    applyUpdate, BUILD, checkForUpdate, connection, downloadUpdate,
+} from '../net/connection.js';
 import ocrService from '../ocr/ocrService.js';
 import ModelInfo from '../components/ModelInfo.vue';
 import { checkWebGPU } from '../llm/llmService.js';
@@ -9,7 +11,7 @@ import {
 } from '../models/modelStore.js';
 
 const nameOf = id => models.find(m => m.id === id)?.name ?? id;
-const STAGE_TITLE = { 1: 'Stufe 1 · Erfassen', 3: 'Stufe 3 · Sprachmodelle' };
+const STAGE_TITLE = { 1: '1 · PDF-Seiten erfassen', 3: '3 · Text mit lokalen Mini-LLMs transformieren' };
 const gpu = ref(null);
 const STATUS_LABEL = { installiert: '✓ Installiert', unvollstaendig: 'Unvollständig', fehlt: 'Nicht installiert' };
 
@@ -19,6 +21,8 @@ const rows = reactive(Object.fromEntries(models.map(model => [model.id, {
 }])));
 const storage = ref({ usage: 0, quota: 0, persisted: false });
 const connected = computed(() => connection.mode === 'verbunden');
+const update = computed(() => connection.update);
+const time = ts => new Date(ts).toLocaleString('de-CH', { dateStyle: 'short', timeStyle: 'medium' });
 
 async function refresh() {
     for (const model of models) {
@@ -90,6 +94,50 @@ async function persist() {
 <template>
   <div class="space-y-4">
     <section class="card bg-base-100 shadow-sm">
+      <div class="card-body gap-3 text-sm">
+        <h2 class="card-title">Programmupdate</h2>
+        <p>
+          Installiert: <strong>{{ BUILD.version }}</strong>, Build <code>{{ BUILD.id.slice(0, 7) }}</code>&nbsp;<span class="opacity-60">({{ time(BUILD.date) }})</span>
+        </p>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            class="btn btn-sm"
+            :disabled="!connected || ['pruefen', 'laden'].includes(update.status)"
+            @click="checkForUpdate"
+          >
+            Nach Updates suchen
+          </button>
+          <span v-if="!connected" class="text-xs opacity-60">Dafür oben zuerst «Verbinden» wählen.</span>
+          <span v-if="update.status === 'pruefen'" class="loading loading-spinner loading-sm" />
+          <span v-if="update.status === 'aktuell'" class="text-success">Die App ist auf dem neuesten Stand.</span>
+          <span v-if="update.status === 'fehler'" class="text-error">{{ update.error }}</span>
+        </div>
+
+        <div v-if="update.status === 'verfuegbar' || update.status === 'laden'" class="rounded-box bg-base-200 p-3">
+          <p>
+            Neue Version <strong>{{ update.remote.version }}</strong>, Build <code>{{ update.remote.id.slice(0, 7) }}</code>&nbsp;<span class="opacity-60">({{ time(update.remote.date) }})</span>
+          </p>
+          <p v-if="update.remote.message" class="opacity-80">«{{ update.remote.message }}»</p>
+          <p class="mt-1">
+            <a class="link" :href="`${update.remote.repository}/compare/${BUILD.commit}...${update.remote.commit}`" target="_blank" rel="noopener noreferrer">
+              Änderungen im Quellcode ansehen
+            </a>
+          </p>
+          <button class="btn btn-sm btn-primary mt-2" :disabled="update.status === 'laden'" @click="downloadUpdate">
+            <span v-if="update.status === 'laden'" class="loading loading-spinner loading-xs" />
+            Update laden
+          </button>
+        </div>
+
+        <div v-if="update.status === 'bereit'" class="rounded-box bg-base-200 p-3">
+          <p>Die neue Version ist geladen. Sie wird beim Neuladen aktiv.</p>
+          <button class="btn btn-sm btn-primary mt-2" @click="applyUpdate">Jetzt neu laden</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card bg-base-100 shadow-sm">
       <div class="card-body gap-3">
         <h2 class="card-title">Modelle in diesem Browser</h2>
         <p class="text-sm opacity-80">
@@ -110,7 +158,7 @@ async function persist() {
     <div v-if="i === 0 || models[i - 1].stage !== model.stage" class="px-1 pt-2">
       <h2 class="text-lg font-semibold">{{ STAGE_TITLE[model.stage] }}</h2>
       <p v-if="model.stage === 3" class="text-sm opacity-80">
-        Für «3 · Transformieren». Installiere eines, je nach Gerät: kleinere Modelle laufen auf mehr Geräten, grössere schreiben besser.
+        Für «3 · Text mit lokalen Mini-LLMs transformieren». Installiere eines, je nach Gerät: kleinere Modelle laufen auf mehr Geräten, grössere schreiben besser.
         <span v-if="gpu" :class="gpu.ok ? 'text-success' : 'text-warning'">
           {{ gpu.ok ? `Dieses Gerät unterstützt WebGPU${gpu.name ? ` (${gpu.name})` : ''}.` : gpu.reason }}
         </span>
@@ -136,9 +184,9 @@ async function persist() {
         <ModelInfo :model="model" />
         <p class="text-sm">
           <span class="text-xs font-semibold uppercase tracking-wide opacity-60">Einstellung</span><br />
-          <template v-if="model.stage === 3">In «3 · Transformieren» unter «Sprachmodell» wählbar. Die gemeinsame Laufzeit (WebGPU) wird beim ersten Sprachmodell mitgeladen und mit dem letzten wieder gelöscht. sobald es installiert ist.</template>
+          <template v-if="model.stage === 3">In «3 · Text mit lokalen Mini-LLMs transformieren» unter «Sprachmodell» wählbar. Die gemeinsame Laufzeit (WebGPU) wird beim ersten Sprachmodell mitgeladen und mit dem letzten wieder gelöscht.</template>
           <template v-else-if="model.option">
-            In «Erfassen» unter «Modelle und Einstellungen»: Schalter <strong>«aktiviert»</strong> bei diesem Modell.
+            In «1 · PDF-Seiten erfassen» unter «Modelle und Einstellungen»: Schalter <strong>«aktiviert»</strong> bei diesem Modell.
             <template v-if="model.requires"> Setzt die installierte {{ nameOf(model.requires) }} voraus.</template>
           </template>
           <template v-else>Keine – wird automatisch verwendet, sobald es installiert ist.</template>

@@ -1,12 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue';
-import {
-    applyUpdate, BUILD, checkForUpdate, clearLog, connection, downloadUpdate,
-} from '../net/connection.js';
+import { clearLog, connection } from '../net/connection.js';
 
 const filter = ref('alle');
 const connected = computed(() => connection.mode === 'verbunden');
-const update = computed(() => connection.update);
 
 const entries = computed(() => connection.log.filter(entry => {
     if (filter.value === 'netz') return entry.kind === 'netz' || entry.kind === 'app';
@@ -67,50 +64,6 @@ function target(entry) {
             </li>
           </ul>
         </details>
-      </div>
-    </section>
-
-    <section class="card bg-base-100 shadow-sm">
-      <div class="card-body gap-3 text-sm">
-        <h2 class="card-title">App-Version</h2>
-        <p>
-          Installiert: <strong>{{ BUILD.version }}</strong>, Build <code>{{ BUILD.id.slice(0, 7) }}</code>&nbsp;<span class="opacity-60">({{ time(BUILD.date) }})</span>
-        </p>
-
-        <div class="flex flex-wrap items-center gap-3">
-          <button
-            class="btn btn-sm"
-            :disabled="!connected || ['pruefen', 'laden'].includes(update.status)"
-            @click="checkForUpdate"
-          >
-            Nach Updates suchen
-          </button>
-          <span v-if="!connected" class="text-xs opacity-60">Dafür oben zuerst «Verbinden» wählen.</span>
-          <span v-if="update.status === 'pruefen'" class="loading loading-spinner loading-sm" />
-          <span v-if="update.status === 'aktuell'" class="text-success">Die App ist auf dem neuesten Stand.</span>
-          <span v-if="update.status === 'fehler'" class="text-error">{{ update.error }}</span>
-        </div>
-
-        <div v-if="update.status === 'verfuegbar' || update.status === 'laden'" class="rounded-box bg-base-200 p-3">
-          <p>
-            Neue Version <strong>{{ update.remote.version }}</strong>, Build <code>{{ update.remote.id.slice(0, 7) }}</code>&nbsp;<span class="opacity-60">({{ time(update.remote.date) }})</span>
-          </p>
-          <p v-if="update.remote.message" class="opacity-80">«{{ update.remote.message }}»</p>
-          <p class="mt-1">
-            <a class="link" :href="`${update.remote.repository}/compare/${BUILD.commit}...${update.remote.commit}`" target="_blank" rel="noopener noreferrer">
-              Änderungen im Quellcode ansehen
-            </a>
-          </p>
-          <button class="btn btn-sm btn-primary mt-2" :disabled="update.status === 'laden'" @click="downloadUpdate">
-            <span v-if="update.status === 'laden'" class="loading loading-spinner loading-xs" />
-            Update laden
-          </button>
-        </div>
-
-        <div v-if="update.status === 'bereit'" class="rounded-box bg-base-200 p-3">
-          <p>Die neue Version ist geladen. Sie wird beim Neuladen aktiv.</p>
-          <button class="btn btn-sm btn-primary mt-2" @click="applyUpdate">Jetzt neu laden</button>
-        </div>
       </div>
     </section>
 

@@ -83,7 +83,7 @@
         "Läuft auch auf schwächeren Geräten, ist im Deutschen aber deutlich ungenauer als Gemma 4."
       ],
       "without": "Stufe 3 braucht mindestens ein Sprachmodell. Stufe 1 und 2 funktionieren ohne.",
-      "usage": "In «3 · Transformieren», wenn es dort als Modell gewählt ist. Braucht einen Browser mit WebGPU (aktuelles Chrome oder Edge, Safari ab 26) und genug Grafikspeicher. Etwa 1,5 GB Grafikspeicher.",
+      "usage": "In «3 · Text mit lokalen Mini-LLMs transformieren», wenn es dort als Modell gewählt ist. Braucht einen Browser mit WebGPU (aktuelles Chrome oder Edge, Safari ab 26) und genug Grafikspeicher. Etwa 1,5 GB Grafikspeicher.",
       "option": null,
       "stage": 3,
       "license": "Gemma-Nutzungsbedingungen",
@@ -169,7 +169,7 @@
         "Gutes Deutsch für seine Grösse; für lange juristische Würdigungen ist es zu klein."
       ],
       "without": "Stufe 3 braucht mindestens ein Sprachmodell. Stufe 1 und 2 funktionieren ohne.",
-      "usage": "In «3 · Transformieren», wenn es dort als Modell gewählt ist. Braucht einen Browser mit WebGPU (aktuelles Chrome oder Edge, Safari ab 26) und genug Grafikspeicher. Etwa 4 GB Grafikspeicher.",
+      "usage": "In «3 · Text mit lokalen Mini-LLMs transformieren», wenn es dort als Modell gewählt ist. Braucht einen Browser mit WebGPU (aktuelles Chrome oder Edge, Safari ab 26) und genug Grafikspeicher. Etwa 4 GB Grafikspeicher.",
       "option": null,
       "stage": 3,
       "license": "Apache-2.0",
@@ -261,7 +261,7 @@
         "Für leistungsfähige Rechner mit viel Grafikspeicher."
       ],
       "without": "Stufe 3 braucht mindestens ein Sprachmodell. Stufe 1 und 2 funktionieren ohne.",
-      "usage": "In «3 · Transformieren», wenn es dort als Modell gewählt ist. Braucht einen Browser mit WebGPU (aktuelles Chrome oder Edge, Safari ab 26) und genug Grafikspeicher. Etwa 6 GB Grafikspeicher.",
+      "usage": "In «3 · Text mit lokalen Mini-LLMs transformieren», wenn es dort als Modell gewählt ist. Braucht einen Browser mit WebGPU (aktuelles Chrome oder Edge, Safari ab 26) und genug Grafikspeicher. Etwa 6 GB Grafikspeicher.",
       "option": null,
       "stage": 3,
       "license": "Apache-2.0",

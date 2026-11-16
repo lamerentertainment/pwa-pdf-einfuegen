@@ -35,7 +35,7 @@ Die App ist Open Source, damit jede und jeder nachprüfen kann, was sie tut.
    indirekte Rede oder als Zusammenfassung. Das Modell läuft im Browser auf der Grafikkarte
    (WebGPU, [transformers.js](https://huggingface.co/docs/transformers.js)), ohne Internet. Zur Wahl
    stehen Gemma 3 1B (0,8 GB), Gemma 4 E2B (3,1 GB, empfohlen) und Gemma 4 E4B (4,9 GB); installiert
-   wird nur, was man auf der Seite *Modelle* auswählt. Die 12 Vorlagen stammen aus der promptlibrary
+   wird nur, was man auf der Seite *Modelle/Programmupdate* auswählt. Die 12 Vorlagen stammen aus der promptlibrary
    ([`src/llm/presets.json`](src/llm/presets.json), übernommen mit
    [`scripts/presets/import_prompts.py`](scripts/presets/import_prompts.py)) und lassen sich vor dem
    Ausführen ansehen und anpassen. Das Ergebnis ist ein Entwurf und muss geprüft werden.
@@ -70,13 +70,13 @@ So ist das umgesetzt, und hier lässt es sich nachprüfen:
 - **Content Security Policy** ([`csp.js`](csp.js)): Der Browser selbst verbietet Verbindungen zu
   allen anderen Servern, unabhängig vom Code der App.
 - **Verbindungsprotokoll**: Jede Netzwerkanfrage, ob erlaubt oder blockiert, erscheint in der App
-  unter *Verbindungen*.
+  unter *Internetverbindung*.
 - **Updates nur auf Wunsch**: Die App sucht nicht selbst nach Updates. Eine neue Version, die der
   Browser von sich aus findet, wird verworfen und protokolliert.
 - **Modelle** ([`models/catalog.json`](models/catalog.json)): Feste Revision, Grösse, Lizenz und
   SHA-256 für jede Datei (für die Sprachmodelle festgelegt mit
   [`scripts/models/pin-llm.mjs`](scripts/models/pin-llm.mjs)). Die Prüfsumme wird beim Herunterladen
-  laufend berechnet; stimmt sie nicht, wird die Datei sofort gelöscht. Auf der Seite *Modelle*
+  laufend berechnet; stimmt sie nicht, wird die Datei sofort gelöscht. Auf der Seite *Modelle/Programmupdate*
   lassen sich Modelle laden, nachprüfen und löschen.
 - **Sprachmodelle ohne Netz** ([`src/llm/llm.worker.js`](src/llm/llm.worker.js)): transformers.js
   erhält eine eigene Abruffunktion, die nur aus dem geprüften Modellspeicher liest. Selbst im Modus

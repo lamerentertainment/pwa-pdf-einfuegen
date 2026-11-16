@@ -8,13 +8,17 @@ import ModelleView from './views/ModelleView.vue';
 import VerbindungView from './views/VerbindungView.vue';
 import { BUILD, connection } from './net/connection.js';
 
-const tabs = [
-    { id: 'erfassen', label: '1 · Erfassen', component: ErfassenView },
-    { id: 'verarbeiten', label: '2 · Verarbeiten', component: VerarbeitenView },
-    { id: 'transformieren', label: '3 · Transformieren', component: TransformierenView },
-    { id: 'modelle', label: 'Modelle', component: ModelleView },
-    { id: 'verbindung', label: 'Verbindungen', component: VerbindungView },
+// Hauptmenü: die drei Arbeitsschritte; Modelle/Programmupdate und Internetverbindung stehen abgesetzt daneben
+const steps = [
+    { id: 'erfassen', number: 1, label: 'PDF-Seiten (mit Text- und/oder Layouterkennung) erfassen', component: ErfassenView },
+    { id: 'verarbeiten', number: 2, label: 'Text mit hartkodierten Algorithmen transformieren (KRG-Makros)', component: VerarbeitenView },
+    { id: 'transformieren', number: 3, label: 'Text mit lokalen Mini-LLMs transformieren', component: TransformierenView },
 ];
+const extras = [
+    { id: 'modelle', label: 'Modelle/Programmupdate', component: ModelleView },
+    { id: 'verbindung', label: 'Internetverbindung', component: VerbindungView },
+];
+const tabs = [...steps, ...extras];
 const active = ref('erfassen');
 const current = computed(() => tabs.find(tab => tab.id === active.value).component);
 
@@ -24,24 +28,44 @@ const commitUrl = `${BUILD.repository}/commit/${BUILD.commit}`;
 <template>
   <div class="flex min-h-screen flex-col bg-base-200">
     <header class="border-b border-base-300 bg-base-100">
-      <div class="mx-auto flex max-w-[1800px] flex-wrap items-center gap-4 px-4 py-3">
-        <div class="flex items-center gap-2">
-          <img src="/icon.svg" alt="" class="size-7" />
-          <span class="font-semibold">PDF einfügen</span>
+      <div class="mx-auto flex max-w-[1800px] flex-col gap-3 px-4 py-3">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div class="flex items-center gap-2">
+            <img src="/icon.svg" alt="" class="size-7" />
+            <span class="font-semibold">PDF einfügen</span>
+          </div>
+          <nav class="ml-auto flex flex-wrap items-center gap-1" aria-label="Einstellungen">
+            <button
+              v-for="tab in extras"
+              :key="tab.id"
+              class="btn btn-sm"
+              :class="active === tab.id ? 'btn-neutral' : 'btn-ghost'"
+              :aria-current="active === tab.id ? 'page' : undefined"
+              @click="active = tab.id"
+            >
+              {{ tab.label }}
+            </button>
+          </nav>
+          <ModeSwitch />
         </div>
-        <nav role="tablist" class="tabs tabs-box tabs-sm">
+        <nav class="grid gap-2 md:grid-cols-3" aria-label="Arbeitsschritte">
           <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            role="tab"
-            class="tab"
-            :class="{ 'tab-active': active === tab.id }"
-            @click="active = tab.id"
+            v-for="step in steps"
+            :key="step.id"
+            class="flex items-center gap-3 rounded-box border px-3 py-2 text-left text-sm transition-colors"
+            :class="active === step.id
+              ? 'border-primary bg-primary text-primary-content'
+              : 'border-base-300 bg-base-100 hover:bg-base-200'"
+            :aria-current="active === step.id ? 'page' : undefined"
+            @click="active = step.id"
           >
-            {{ tab.label }}
+            <span
+              class="flex size-7 shrink-0 items-center justify-center rounded-full font-semibold"
+              :class="active === step.id ? 'bg-primary-content text-primary' : 'bg-base-200'"
+            >{{ step.number }}</span>
+            <span>{{ step.label }}</span>
           </button>
         </nav>
-        <div class="ml-auto"><ModeSwitch /></div>
       </div>
     </header>
 

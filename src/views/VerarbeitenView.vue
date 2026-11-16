@@ -145,7 +145,7 @@ function download() {
     <section class="card bg-base-100 shadow-sm">
       <div class="card-body gap-3 py-4">
         <div class="flex flex-wrap items-center gap-3">
-          <h2 class="card-title">Stufe 2 · Text weiterverarbeiten</h2>
+          <h2 class="card-title">2 · Text mit hartkodierten Algorithmen transformieren (KRG-Makros)</h2>
           <div class="join ml-auto" role="radiogroup" aria-label="Umwandlung">
             <button
               v-for="(m, key) in MODES"
@@ -161,17 +161,30 @@ function download() {
           </div>
         </div>
         <p class="text-sm opacity-80">
-          <template v-if="mode === 'einfuegen'">
-            Entfernt Zeilenumbrüche und Worttrennungen, vereinheitlicht Anführungszeichen und Frankenbeträge und
-            korrigiert typische Fehler der Texterkennung («lch» → «Ich»).
-          </template>
-          <template v-else>
-            Zusätzlich Umwandlung in die indirekte Rede: erste in dritte Person, Verben in den Konjunktiv
-            («Ich bin unschuldig» → «{{ mode === 'mann' ? 'Er' : 'Sie' }} sei unschuldig»).
-            Das funktioniert mit festen Wortlisten. Das Ergebnis muss immer geprüft und meist überarbeitet werden.
-          </template>
-          Alles läuft in diesem Browser, ohne Modell und ohne Internet.
+          Feste Regeln und Wortlisten, übernommen aus den KRG-Makros. Kein Modell, kein Internet: Derselbe Text
+          ergibt immer dasselbe Ergebnis, und jede Änderung lässt sich hervorheben und nachprüfen.
         </p>
+        <ul class="list-disc space-y-1 pl-5 text-sm opacity-80">
+          <li>
+            <strong>Zeilen zusammenfügen</strong> (immer): Zeilenumbrüche aus dem PDF entfernen und Worttrennungen am
+            Zeilenende auflösen («Jung- geselle» → «Junggeselle»), doppelte Leerzeichen kürzen, «» durch "
+            ersetzen, Frankenbeträge vereinheitlichen («CHF 50.00» → «Fr. 50.--») und typische Fehler der
+            Texterkennung korrigieren («lch» → «Ich», «,,» → ").
+          </li>
+          <li :class="{ 'opacity-60': mode === 'einfuegen' }">
+            <strong>Als Aussage (Mann/Frau)</strong> (zusätzlich): in die indirekte Rede umwandeln, also erste in dritte
+            Person und Verben in den Konjunktiv, auch im Präteritum («Ich bin unschuldig» →
+            «{{ mode === 'frau' ? 'Sie' : 'Er' }} sei unschuldig», «Ich ging nach Hause» → «{{ mode === 'frau' ? 'Sie' : 'Er' }} sei nach Hause gegangen»).
+            Das geht nur mit Wortlisten: Das Ergebnis immer prüfen und meist überarbeiten.
+          </li>
+          <li>
+            <strong>Fundstellen erkennen</strong> (immer, neu): Bundesgerichtsentscheide (Geschäftsnummern wie
+            6B_123/2020 und BGE 145 IV 1) und Gesetzesartikel (Art. 47 StGB, Art. 12a Abs. 2 BetmG) werden
+            im Ergebnis gefunden und unten als Links angeboten: Entscheide auf bger.li, Artikel auf Fedlex. Das
+            ersetzt die Makros «BGerAufruf» und «GesetzAufruf», ohne dass man die Stelle zuerst markieren muss.
+            Abgerufen wird nichts; erst ein Klick öffnet einen neuen Tab.
+          </li>
+        </ul>
         <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
           <label class="flex items-center gap-2">
             <input v-model="keepParagraphs" type="checkbox" class="checkbox checkbox-sm" /> Absätze erhalten
@@ -296,7 +309,7 @@ function download() {
       Tipp: Ein Klick auf eine Stelle in einem Feld setzt die entsprechende Stelle im anderen Feld auf dieselbe Höhe.
     </p>
     <p class="text-xs opacity-60">
-      Regeln und Wortlisten aus «PDF einfügen» ({{ WORDLIST_SOURCE }}), Stufe 3 mit einem kleinen lokalen Sprachmodell folgt.
+      Regeln und Wortlisten aus «PDF einfügen» ({{ WORDLIST_SOURCE }}), Fundstellen nach den Makros «BGerAufruf» und «GesetzAufruf».
     </p>
   </div>
 </template>
