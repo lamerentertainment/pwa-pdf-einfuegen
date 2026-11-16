@@ -136,7 +136,8 @@ function noticeText(notice) {
 
           <div>
             <p class="mb-2 text-sm opacity-80">
-              <strong>Modelle</strong> wirken beim Einlesen und nur auf gescannten Seiten. Digitale PDFs brauchen keines.
+              <strong>Modelle</strong> wirken beim Einlesen und nur auf gescannten Seiten – ausser du lässt auch digitale Seiten erkennen. Digitale PDFs brauchen keines.
+              Einzelne Seiten lassen sich nach dem Einlesen in der Prüfansicht mit anderer Einstellung neu erfassen.
             </p>
             <div class="grid items-start gap-3 xl:grid-cols-2">
               <div
@@ -177,14 +178,23 @@ function noticeText(notice) {
                 </p>
 
                 <!-- Einstellungen, die zu diesem Modell gehören -->
-                <label
+                <div
                   v-if="model.option === 'ocr'"
-                  class="flex items-center gap-2 text-sm"
+                  class="flex flex-col gap-1.5 text-sm"
                   :class="{ 'opacity-50': !isEffective(model) }"
                 >
-                  <input v-model="documentState.options.markUncertain" type="checkbox" class="checkbox checkbox-sm" :disabled="!isEffective(model)" />
-                  Unsichere Zeilen im Text mit [?] markieren
-                </label>
+                  <label class="flex items-center gap-2">
+                    <input v-model="documentState.options.markUncertain" type="checkbox" class="checkbox checkbox-sm" :disabled="!isEffective(model)" />
+                    Unsichere Zeilen im Text mit [?] markieren
+                  </label>
+                  <label class="flex items-start gap-2">
+                    <input v-model="documentState.options.forceOcr" type="checkbox" class="checkbox checkbox-sm mt-0.5" :disabled="!isEffective(model)" data-testid="force-ocr" />
+                    <span>
+                      Auch digitale Seiten erkennen
+                      <span class="block text-xs opacity-70">Übergeht den eingebetteten Text und liest jede Seite mit der Texterkennung (und dem Layoutmodell, falls aktiviert). Langsamer.</span>
+                    </span>
+                  </label>
+                </div>
                 <div
                   v-if="model.option === 'layout'"
                   class="flex flex-col gap-1.5 text-sm"

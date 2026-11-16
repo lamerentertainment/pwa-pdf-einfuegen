@@ -8,7 +8,8 @@ import RegionPanel from './RegionPanel.vue';
 import {
     defaultOrder, mergeGroups, moveInOrder, orderFromClicks,
 } from '../capture/layoutRegions.js';
-import { applyLayoutChange, documentState, relayoutDocument } from '../capture/documentStore.js';
+import { applyLayoutChange, documentState, recaptureDocumentPage, relayoutDocument } from '../capture/documentStore.js';
+import ocrService, { LAYOUT_MODEL_ID, OCR_MODEL_ID } from '../ocr/ocrService.js';
 import { hasMarkdownTable, renderMarkdown } from '../capture/markdown.js';
 import { usePreference } from './usePreference.js';
 import { UNCERTAIN_SCORE } from '../capture/options.js';
@@ -274,6 +275,56 @@ function onRegionClick(id, event) {
 
 watch(index, () => { orderClicks.value = []; });
 
+// --- Einzelne Seite neu erfassen ----------------------------------------------------------
+// Andere Quelle (eingebetteter Text, Texterkennung, mit Layoutmodell) und Auflösung für eine
+// Seite, ohne das ganze PDF neu einzulesen
+const RECAPTURE_OPTIONS = [
+    { mode: 'text', text: 'Eingebetteter Text des PDFs' },
+    { mode: 'ocr', text: 'Texterkennung (OCR)' },
+    { mode: 'ocr-layout', text: 'Texterkennung mit Layoutmodell' },
+];
+const installed = reactive({ ocr: false, layout: false });
+const recapture = reactive({ mode: 'ocr', dpi: 150, confirm: false, error: '' });
+const recaptureMenu = ref(null);
+const recaptureAvailable = mode => mode === 'text' || (installed.ocr && (mode !== 'ocr-layout' || installed.layout));
+const recaptureRunning = computed(() => documentState.recapture);
+
+async function prepareRecapture() {
+    if (!recaptureMenu.value?.open) return;
+    const [ocr, layout] = await Promise.all([ocrService.isInstalled(OCR_MODEL_ID), ocrService.isInstalled(LAYOUT_MODEL_ID)]);
+    Object.assign(installed, { ocr, layout });
+    // Vorschlag: die andere Quelle als bisher
+    const current = page.value.source;
+    const wanted = current === 'ocr' && layout ? 'ocr-layout' : (current.startsWith('ocr') ? 'text' : 'ocr');
+    recapture.mode = recaptureAvailable(wanted) ? wanted : 'text';
+    recapture.confirm = false;
+    recapture.error = '';
+}
+watch(index, () => {
+    if (recaptureMenu.value) recaptureMenu.value.open = false;
+});
+
+async function runRecapture() {
+    if (edited.value && !recapture.confirm) {
+        recapture.confirm = true;
+        return;
+    }
+    recapture.confirm = false;
+    recapture.error = '';
+    const n = page.value.number;
+    const { ok, error } = await recaptureDocumentPage(n, { mode: recapture.mode, dpi: recapture.dpi });
+    if (!ok) {
+        recapture.error = error ?? 'Die Seite konnte nicht neu erfasst werden.';
+        return;
+    }
+    // Bereiche der alten Seite gibt es nicht mehr
+    selection.value = selection.value.filter(s => s.page !== n);
+    orderClicks.value = [];
+    activeBox.value = -1;
+    hint.value = '';
+    if (recaptureMenu.value) recaptureMenu.value.open = false;
+}
+
 function reset() {
     page.value.text = page.value.originalText;
 }
@@ -293,7 +344,7 @@ function reset() {
           <ChevronRightIcon class="size-4" />
         </button>
       </div>
-      <span class="badge" :class="source.cls">{{ source.text }}</span>
+      <span class="badge" :class="source.cls">{{ source.text }}<template v-if="page.dpi && page.dpi !== 150"> · {{ page.dpi }} dpi</template></span>
       <span v-if="edited" class="badge badge-neutral">bearbeitet</span>
       <span v-if="uncertain.length" class="text-sm">
         {{ uncertain.length }} unsichere Zeile{{ uncertain.length === 1 ? '' : 'n' }}
@@ -330,7 +381,38 @@ function reset() {
       <label v-if="view === 'text'" class="flex items-center gap-2">
         <input v-model="wrapLines" type="checkbox" class="checkbox checkbox-xs" /> Zeilen umbrechen
       </label>
-      <details class="ml-auto" @toggle="cancelRelayout">
+      <details ref="recaptureMenu" class="ml-auto" data-testid="neu-erfassen" @toggle="prepareRecapture">
+        <summary class="cursor-pointer select-none">Seite neu erfassen</summary>
+        <div class="mt-2 flex flex-col gap-1.5 rounded-box border border-base-300 bg-base-100 p-3">
+          <p class="text-xs opacity-70">Seite {{ page.number }} mit anderer Einstellung erfassen. Die übrigen Seiten bleiben, wie sie sind.</p>
+          <label
+            v-for="option in RECAPTURE_OPTIONS"
+            :key="option.mode"
+            class="flex items-center gap-2"
+            :class="{ 'opacity-50': !recaptureAvailable(option.mode) }"
+          >
+            <input v-model="recapture.mode" type="radio" name="neu-erfassen" class="radio radio-xs" :value="option.mode" :disabled="!recaptureAvailable(option.mode)" />
+            {{ option.text }}
+            <span v-if="option.mode === page.source" class="text-xs opacity-60">(bisher)</span>
+            <span v-else-if="!recaptureAvailable(option.mode)" class="text-xs opacity-60">(Modell nicht installiert)</span>
+          </label>
+          <label v-if="recapture.mode !== 'text'" class="flex items-center gap-2">
+            Auflösung
+            <select v-model.number="recapture.dpi" class="select select-xs w-auto" aria-label="Auflösung der Texterkennung">
+              <option :value="150">150 dpi (Standard)</option>
+              <option :value="300">300 dpi (feiner, langsamer)</option>
+            </select>
+          </label>
+          <p v-if="recapture.confirm" class="text-xs text-warning">Deine Bearbeitungen dieser Seite gehen dabei verloren. Nochmals klicken zum Bestätigen.</p>
+          <p v-if="recapture.error" class="text-xs text-error">{{ recapture.error }}</p>
+          <p v-if="recaptureRunning" class="text-xs">{{ recaptureRunning.status || 'Wird neu erfasst …' }}</p>
+          <button class="btn btn-xs btn-primary self-start" :disabled="Boolean(recaptureRunning) || !recaptureAvailable(recapture.mode)" @click="runRecapture">
+            <span v-if="recaptureRunning" class="loading loading-spinner loading-xs" />
+            {{ recapture.confirm ? 'Trotzdem neu erfassen' : 'Seite neu erfassen' }}
+          </button>
+        </div>
+      </details>
+      <details @toggle="cancelRelayout">
         <summary class="cursor-pointer select-none">Textaufbau anpassen</summary>
         <div class="mt-2 flex flex-col gap-1.5 rounded-box border border-base-300 bg-base-100 p-3">
           <label class="flex items-center gap-2"><input v-model="draft.tables" type="checkbox" class="checkbox checkbox-xs" /> Tabellen als Markdown-Tabellen</label>

@@ -16,6 +16,8 @@ export const documentState = reactive({
     progress: 0,
     error: null,
     controller: null,
+    // Laufende Neuerfassung einer Seite: { page, status } oder null
+    recapture: null,
 });
 
 export async function closeDocument() {
@@ -96,6 +98,59 @@ export function applyLayoutChange(mutate, { force = false } = {}) {
         }
     });
     return { conflicts: [] };
+}
+
+/**
+ * Setzt eine neu erfasste Seite ein. Verbindungen zu Layoutbereichen der alten Seite werden
+ * gelöst (die Bereiche gibt es nicht mehr). Die Seite erhält ihren neuen Text; andere Seiten nur,
+ * wenn sich ihr Text ändert (Kopfzeilen-Erkennung über das Dokument) und sie nicht bearbeitet sind.
+ * Rein und ohne pdf.js – für Tests exportiert.
+ */
+export function replacePage(state, record) {
+    const n = record.number;
+    const at = state.pages.findIndex(p => p.number === n);
+    if (at < 0) throw new Error(`Seite ${n} gibt es nicht.`);
+    state.layoutGroups = state.layoutGroups
+        .map(g => ({ ...g, members: g.members.filter(m => m.page !== n) }))
+        .filter(g => g.members.length >= 2);
+    const page = state.pages[at];
+    for (const key of ['items', 'boxes', 'view', 'layout', 'source', 'scanReason', 'dpi', 'width', 'height']) delete page[key];
+    Object.assign(page, record, { items: markRaw(record.items), boxes: markRaw(record.boxes) });
+    const texts = buildPageTexts(state.pages, state.options, state.layoutGroups);
+    state.pages.forEach((p, i) => {
+        if (i === at || (texts[i] !== p.originalText && p.text === p.originalText)) {
+            p.text = texts[i];
+            p.originalText = texts[i];
+        }
+    });
+}
+
+/**
+ * Erfasst eine Seite mit anderer Einstellung neu (siehe capture.js: recapturePage).
+ * Eigene Bearbeitungen dieser Seite gehen verloren.
+ * @returns {Promise<{ok: boolean, error?: string}>}
+ */
+export async function recaptureDocumentPage(number, config) {
+    if (!documentState.pdf || documentState.recapture) return { ok: false };
+    documentState.recapture = { page: number, status: '' };
+    try {
+        const { recapturePage } = await import('./capture.js');
+        const { record, notices } = await recapturePage(documentState.pdf, number, config, {
+            onStatus: text => { if (documentState.recapture) documentState.recapture.status = text; },
+        });
+        replacePage(documentState, record);
+        // Alte Meldungen zu dieser Seite gelten nicht mehr
+        documentState.notices = [
+            ...documentState.notices.filter(x => x.page !== number),
+            ...notices.map(x => ({ ...x, page: number })),
+        ];
+        return { ok: true };
+    } catch (err) {
+        console.error(`Neuerfassung von Seite ${number} fehlgeschlagen:`, err);
+        return { ok: false, error: err.message };
+    } finally {
+        documentState.recapture = null;
+    }
 }
 
 export function cancel() {

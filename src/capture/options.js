@@ -6,6 +6,7 @@ export const UNCERTAIN_SCORE = 0.8;
 
 export const DEFAULT_OPTIONS = Object.freeze({
     ocr: true, // Texterkennung für gescannte Seiten (nur wenn installiert)
+    forceOcr: false, // Texterkennung auch auf digitalen Seiten (eingebetteten Text übergehen)
     layout: false, // Layoutmodell verwenden (nur wenn installiert, braucht die Texterkennung)
     markUncertain: false, // unsichere OCR-Zeilen im Text mit [?] markieren
     keepLineNumbers: false, // Zeilennummern am Rand behalten
