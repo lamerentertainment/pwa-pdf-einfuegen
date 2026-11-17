@@ -40,14 +40,17 @@ Die App ist Open Source, damit jede und jeder nachprüfen kann, was sie tut.
    lassen sich eigene anlegen, etwa für Rechtsschriften («ich» → «der Beschuldigte»): Sie speichern nur
    ihre Abweichungen von einer Grundlage, bleiben im Browser und lassen sich als .json exportieren und
    importieren ([`src/process/konvertierungen.js`](src/process/konvertierungen.js)).
-3. **Transformieren** – mit einem lokalen Sprachmodell nach einer Vorlage umformen, etwa in die
+3. **Transformieren** – mit einem lokalen Sprachmodell nach einem Prompt umformen, etwa in die
    indirekte Rede oder als Zusammenfassung. Das Modell läuft im Browser auf der Grafikkarte
    (WebGPU, [transformers.js](https://huggingface.co/docs/transformers.js)), ohne Internet. Zur Wahl
    stehen Gemma 3 1B (0,8 GB), Gemma 4 E2B (3,1 GB, empfohlen) und Gemma 4 E4B (4,9 GB); installiert
-   wird nur, was man auf der Seite *Modelle/Programmupdate* auswählt. Die 12 Vorlagen stammen aus der promptlibrary
+   wird nur, was man auf der Seite *Modelle/Programmupdate* auswählt. Die 10 Prompts stammen aus der promptlibrary
    ([`src/llm/presets.json`](src/llm/presets.json), übernommen mit
    [`scripts/presets/import_prompts.py`](scripts/presets/import_prompts.py)) und lassen sich vor dem
-   Ausführen ansehen und anpassen. Das Ergebnis ist ein Entwurf und muss geprüft werden.
+   Ausführen ansehen und anpassen. In der *Promptbibliothek* (Zahnrad neben der Auswahl) lassen sich
+   eigene Prompts anlegen, eingebaute als Vorlage verwenden oder ausblenden; eigene bleiben im Browser
+   und lassen sich als .json exportieren und importieren ([`src/llm/promptBibliothek.js`](src/llm/promptBibliothek.js)).
+   Das Ergebnis ist ein Entwurf und muss geprüft werden.
 
 ## Zum Ausprobieren
 

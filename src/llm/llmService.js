@@ -1,10 +1,7 @@
 // Seitenseite des Sprachmodell-Workers: Modell laden, Text erzeugen (gestreamt), abbrechen.
 import { getStatus, models } from '../models/modelStore.js';
-import presetData from './presets.json';
 
 export const LLM_MODELS = models.filter(model => model.stage === 3);
-export const PRESETS = presetData.presets;
-export const PRESET_SOURCE = presetData.quelle;
 const VENDOR_BASE = '/vendor/';
 
 /** Setzt den Eingabetext in einen Prompt ein ({{INPUT}}). */

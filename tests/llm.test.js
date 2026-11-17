@@ -22,8 +22,8 @@ describe('resolvePinned', () => {
 });
 
 describe('Presets', () => {
-    it('hat jede Vorlage genau einen Platzhalter {{INPUT}} und keine Reste des alten Werkzeugs', () => {
-        expect(presetData.presets.length).toBe(12);
+    it('hat jeder eingebaute Prompt genau einen Platzhalter {{INPUT}} und keine Reste des alten Werkzeugs', () => {
+        expect(presetData.presets.length).toBe(10);
         for (const preset of presetData.presets) {
             expect(preset.prompt.split('{{INPUT}}').length - 1, preset.id).toBe(1);
             expect(preset.prompt, preset.id).not.toMatch(/\{\{(MODEL|CLIPBOARD|anontext)/);

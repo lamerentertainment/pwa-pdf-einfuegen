@@ -15,16 +15,16 @@ from pathlib import Path
 
 source = Path(sys.argv[1]).resolve()
 
-# Vom Nutzer einzeln bestätigt (Gruppen «Indirekte Rede», «Fragen und Vorhalte», «Zusammenfassen»)
+# Vom Nutzer einzeln bestätigt (Gruppen «In indirekte Rede umwandeln» und «Zusammenfassen»). Nicht übernommen:
+# frage-und-aussagekonvertierung-*, eine ältere Fassung von einvernahmekonvertierung-* (gleiche Regeln,
+# aber ohne die Regel für Frankenbeträge und ohne Beispiel für das Ergebnis).
 PRESETS = [
-    ('aussage-m', 'aussagekonvertierung-mannlich.txt', 'Indirekte Rede', 'Aussage (Mann)', 'Aussage eines Mannes in die indirekte Rede, mit Belegstelle (Ziff. ).'),
-    ('aussage-w', 'aussagekonvertierung-weiblich.txt', 'Indirekte Rede', 'Aussage (Frau)', 'Aussage einer Frau in die indirekte Rede, mit Belegstelle (Ziff. ).'),
-    ('einvernahme-m', 'einvernahmekonvertierung-mannlich', 'Indirekte Rede', 'Einvernahme: Frage und Antwort (Mann)', 'Nummerierte Frage und Antwort eines Mannes in die indirekte Rede.'),
-    ('einvernahme-w', 'einvernahmekonvertierung-weiblich.txt', 'Indirekte Rede', 'Einvernahme: Frage und Antwort (Frau)', 'Nummerierte Frage und Antwort einer Frau in die indirekte Rede.'),
-    ('frage-m', 'fragekonvertierung-mannlich', 'Fragen und Vorhalte', 'Frage als Vorhalt (Mann)', 'Frage an einen Mann als Vorhalt: «Ob er … habe:».'),
-    ('frage-w', 'fragekonvertierung-weiblich', 'Fragen und Vorhalte', 'Frage als Vorhalt (Frau)', 'Frage an eine Frau als Vorhalt: «Ob sie … habe:».'),
-    ('frage-aussage-m', 'frage-und-aussagekonvertierung-mannlich.txt', 'Fragen und Vorhalte', 'Frage und Aussage (Mann)', 'Frage und Aussage eines Mannes gemeinsam in die indirekte Rede.'),
-    ('frage-aussage-w', 'frage-und-aussagekonvertierung-weiblich.txt', 'Fragen und Vorhalte', 'Frage und Aussage (Frau)', 'Frage und Aussage einer Frau gemeinsam in die indirekte Rede.'),
+    ('aussage-m', 'aussagekonvertierung-mannlich.txt', 'In indirekte Rede umwandeln', 'Aussage (Mann)', 'Aussage eines Mannes in die indirekte Rede, mit Belegstelle (Ziff. ).'),
+    ('aussage-w', 'aussagekonvertierung-weiblich.txt', 'In indirekte Rede umwandeln', 'Aussage (Frau)', 'Aussage einer Frau in die indirekte Rede, mit Belegstelle (Ziff. ).'),
+    ('einvernahme-m', 'einvernahmekonvertierung-mannlich', 'In indirekte Rede umwandeln', 'Einvernahme: Frage und Antwort (Mann)', 'Nummerierte Frage und Antwort eines Mannes in die indirekte Rede.'),
+    ('einvernahme-w', 'einvernahmekonvertierung-weiblich.txt', 'In indirekte Rede umwandeln', 'Einvernahme: Frage und Antwort (Frau)', 'Nummerierte Frage und Antwort einer Frau in die indirekte Rede.'),
+    ('frage-m', 'fragekonvertierung-mannlich', 'In indirekte Rede umwandeln', 'Frage als Vorhalt (Mann)', 'Frage an einen Mann als Vorhalt: «Ob er … habe:».'),
+    ('frage-w', 'fragekonvertierung-weiblich', 'In indirekte Rede umwandeln', 'Frage als Vorhalt (Frau)', 'Frage an eine Frau als Vorhalt: «Ob sie … habe:».'),
     ('dokument', 'dokument-zusammenfassen.txt', 'Zusammenfassen', 'Dokument zusammenfassen', '«Mit [Dokumenttyp] vom [Datum] legte [Verfasser] dar …», höchstens 6 Sätze.'),
     ('aussagen', 'aussagen-zusammenfassen.txt', 'Zusammenfassen', 'Aussagen zusammenfassen', 'Standpunkt der einvernommenen Person zu den Vorwürfen, knapp für ein Urteil.'),
     ('anklage', 'anklage-zusammenfassen.txt', 'Zusammenfassen', 'Anklage zusammenfassen', '«Die Anklage wirft der beschuldigten Person vor, …»'),

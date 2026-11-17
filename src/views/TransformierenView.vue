@@ -1,11 +1,15 @@
 <script setup>
 import { computed, onActivated, onMounted, ref, watch } from 'vue';
-import { ArrowDownTrayIcon, ClipboardDocumentIcon, DocumentArrowDownIcon, StopIcon, SparklesIcon } from '@heroicons/vue/24/outline';
+import { ArrowDownTrayIcon, ClipboardDocumentIcon, Cog6ToothIcon, DocumentArrowDownIcon, StopIcon, SparklesIcon } from '@heroicons/vue/24/outline';
 import { documentState } from '../capture/documentStore.js';
 import { joinPages } from '../capture/joinPages.js';
 import { processState } from '../process/processStore.js';
 import { formatBytes, modelSize } from '../models/modelStore.js';
-import llm, { checkWebGPU, fillPrompt, installedLlms, LLM_MODELS, PRESET_SOURCE, PRESETS } from '../llm/llmService.js';
+import llm, { checkWebGPU, fillPrompt, installedLlms, LLM_MODELS } from '../llm/llmService.js';
+import {
+    EINGEBAUT, QUELLE, aenderePrompt, duplizierePrompt, findePrompt, gruppiert, istAusgeblendet, sichtbarePrompts,
+} from '../llm/promptBibliothek.js';
+import PromptsDialog from '../components/PromptsDialog.vue';
 import { usePreference } from '../components/usePreference.js';
 import LineBreakBackdrop from '../components/LineBreakBackdrop.vue';
 
@@ -14,7 +18,8 @@ const emit = defineEmits(['navigate']);
 const gpu = ref(null); // { ok, name } | { ok: false, reason }
 const installed = ref([]);
 const modelId = usePreference('transformieren.modell', '');
-const presetId = usePreference('transformieren.preset', PRESETS[0].id);
+const presetId = usePreference('transformieren.preset', EINGEBAUT[0].id);
+const dialog = ref(null);
 // Zeilenumbrüche in den Textfeldern als graue Zeichen (↵) anzeigen, nur Anzeige
 const showBreaks = usePreference('transformieren.umbrueche', true);
 const promptEl = ref(null);
@@ -30,20 +35,26 @@ const error = ref(null);
 const copied = ref(false);
 const loadedId = ref(null); // welches Modell im Grafikspeicher liegt
 
-const groups = computed(() => {
-    const map = new Map();
-    for (const preset of PRESETS) {
-        if (!map.has(preset.group)) map.set(preset.group, []);
-        map.get(preset.group).push(preset);
-    }
-    return [...map.entries()];
-});
-const preset = computed(() => PRESETS.find(p => p.id === presetId.value) ?? PRESETS[0]);
+const groups = computed(() => gruppiert(sichtbarePrompts()));
+// Gelöscht oder ausgeblendet: der erste sichtbare Prompt (oder, wenn alle ausgeblendet sind, der erste eingebaute)
+const preset = computed(() => (!istAusgeblendet(presetId.value) && findePrompt(presetId.value)) || sichtbarePrompts()[0] || EINGEBAUT[0]);
+watch(preset, p => { if (p.id !== presetId.value) presetId.value = p.id; }, { immediate: true });
 const model = computed(() => installed.value.find(m => m.id === modelId.value));
 const promptEdited = computed(() => promptTemplate.value !== preset.value.prompt);
 const canRun = computed(() => gpu.value?.ok && model.value && input.value.trim() && phase.value === 'idle');
 
-watch(preset, p => { promptTemplate.value = p.prompt; }, { immediate: true });
+// Auch wenn ein eigener Prompt in der Bibliothek geändert wird; vorübergehende Anpassungen gehen dabei verloren
+watch(() => preset.value.prompt, p => { promptTemplate.value = p; }, { immediate: true });
+
+function alsEigenenSpeichern() {
+    const id = duplizierePrompt(preset.value.id, promptTemplate.value);
+    presetId.value = id;
+    dialog.value.bearbeite(id);
+}
+
+function imPromptSpeichern() {
+    aenderePrompt(preset.value.id, { prompt: promptTemplate.value });
+}
 
 async function refresh() {
     installed.value = await installedLlms();
@@ -108,7 +119,7 @@ async function copy() {
 
 function download() {
     const url = URL.createObjectURL(new Blob([output.value], { type: 'text/plain;charset=utf-8' }));
-    Object.assign(document.createElement('a'), { href: url, download: `${preset.value.id}.txt` }).click();
+    Object.assign(document.createElement('a'), { href: url, download: `${preset.value.eingebaut ? preset.value.id : 'ergebnis'}.txt` }).click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 </script>
@@ -119,7 +130,7 @@ function download() {
       <div class="card-body gap-4">
         <h2 class="card-title">3 · Text mit lokalen Mini-LLMs transformieren</h2>
         <p class="text-sm opacity-80">
-          Ein kleines Sprachmodell formt den Text nach einer Vorlage um, etwa in die indirekte Rede oder als Zusammenfassung.
+          Ein kleines Sprachmodell formt den Text nach einem Prompt um, etwa in die indirekte Rede oder als Zusammenfassung.
           Es läuft vollständig in diesem Browser auf der Grafikkarte, ohne Internet. Das Ergebnis ist ein Entwurf und muss immer geprüft werden.
         </p>
 
@@ -151,14 +162,19 @@ function download() {
             </template>
           </div>
 
-          <!-- Vorlage -->
+          <!-- Prompt -->
           <div class="space-y-2">
-            <p class="text-sm font-semibold">Vorlage</p>
-            <select v-model="presetId" class="select select-sm w-full" aria-label="Vorlage" :disabled="phase !== 'idle'">
-              <optgroup v-for="[group, items] in groups" :key="group" :label="group">
-                <option v-for="p in items" :key="p.id" :value="p.id">{{ p.title }}</option>
-              </optgroup>
-            </select>
+            <p class="text-sm font-semibold">Prompt</p>
+            <div class="flex items-center gap-1">
+              <select v-model="presetId" class="select select-sm min-w-0 flex-1" aria-label="Prompt" :disabled="phase !== 'idle'">
+                <optgroup v-for="[group, items] in groups" :key="group" :label="group">
+                  <option v-for="p in items" :key="p.id" :value="p.id">{{ p.title }}</option>
+                </optgroup>
+              </select>
+              <button class="btn btn-sm btn-ghost btn-square" title="Promptbibliothek: eigene Prompts erstellen, bearbeiten, importieren" aria-label="Promptbibliothek" @click="dialog.open(preset.id)">
+                <Cog6ToothIcon class="size-5" />
+              </button>
+            </div>
             <p class="text-xs opacity-70">{{ preset.description }}</p>
             <details class="text-sm">
               <summary class="cursor-pointer select-none text-xs">Prompt ansehen und anpassen{{ promptEdited ? ' (angepasst)' : '' }}</summary>
@@ -170,12 +186,16 @@ function download() {
                   class="textarea relative h-64 w-full resize-y font-mono text-xs leading-5 [scrollbar-gutter:stable]"
                   :class="{ 'bg-transparent': showBreaks }"
                   spellcheck="false"
-                  aria-label="Prompt der Vorlage"
+                  aria-label="Prompt-Text"
                 />
               </div>
               <div class="flex flex-wrap items-center gap-3 text-xs opacity-70">
                 <span><code v-pre>{{INPUT}}</code> steht für den Eingabetext.</span>
-                <button v-if="promptEdited" class="link" @click="promptTemplate = preset.prompt">Original wiederherstellen</button>
+                <template v-if="promptEdited">
+                  <button v-if="preset.eingebaut" class="link" @click="alsEigenenSpeichern">Als eigenen Prompt speichern</button>
+                  <button v-else class="link" @click="imPromptSpeichern">Im Prompt speichern</button>
+                  <button class="link" @click="promptTemplate = preset.prompt">{{ preset.eingebaut ? 'Original' : 'Gespeicherten Prompt' }} wiederherstellen</button>
+                </template>
               </div>
             </details>
           </div>
@@ -258,6 +278,8 @@ function download() {
       </section>
     </div>
 
-    <p class="text-xs opacity-60">Vorlagen aus der promptlibrary ({{ PRESET_SOURCE }}).</p>
+    <p class="text-xs opacity-60">Eingebaute Prompts aus der promptlibrary ({{ QUELLE }}); eigene speichert nur dieser Browser.</p>
+
+    <PromptsDialog ref="dialog" @waehle="id => (presetId = id)" />
   </div>
 </template>
