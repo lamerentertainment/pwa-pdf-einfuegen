@@ -34,6 +34,13 @@ describe('Korrekturen gegenüber dem Original', () => {
             .toBe('Er sei nach Hause gegangen und habe sofort ein geschlafen. ');
     });
 
+    it('lässt Seitenmarker aus Stufe 1 ganz', () => {
+        const text = '--- Seite 1 ---\n\nIch war müde.\n\n--- Seite 2 ---\n\nIch ging nach Hause.';
+        expect(processText(text, { listen: eingebauteListen('m') }))
+            .toBe('--- Seite 1 ---\n\nEr sei müde gewesen.\n\n--- Seite 2 ---\n\nEr sei nach Hause gegangen.');
+        expect(processText(text, {}, { keepParagraphs: false })).toBe('--- Seite 1 --- Ich war müde. --- Seite 2 --- Ich ging nach Hause.');
+    });
+
     it('stürzt nicht ab, wenn ein Satzzeichen direkt auf das Verb folgt', () => {
         expect(alsAussageFormatieren('Ich ging.', 'm')).toBe('Er sei gegangen. ');
     });
@@ -74,7 +81,7 @@ describe('Schritte der Bereinigung einzeln abwählen', () => {
     });
 
     it('lässt Anführungszeichen, Beträge und OCR-Fehler stehen', () => {
-        const schritte = ohne('anfuehrungszeichen', 'franken', 'ocrZeichen', 'ocrWoerter');
+        const schritte = ohne('anfuehrungszeichen', 'franken', 'ocr');
         expect(verarbeite('lch zahle CHF 50.00 «sofort» ,,ja"', { schritte })).toBe('lch zahle CHF 50.00 «sofort» ,,ja" ');
     });
 

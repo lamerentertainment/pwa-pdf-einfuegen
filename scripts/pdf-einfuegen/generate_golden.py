@@ -6,8 +6,8 @@ Umsetzung in src/process/rules.js Zeichen für Zeichen prüft.
 
 Aufruf:  python3 scripts/pdf-einfuegen/generate_golden.py ../pdf-einfuegen
 
-Drei Fehler des Originals sind in der JavaScript-Umsetzung behoben. Damit die Referenz
-dieselbe Logik beschreibt, werden genau diese drei Korrekturen hier als Patch auf den
+Fünf Fehler des Originals sind in der JavaScript-Umsetzung behoben. Damit die Referenz
+dieselbe Logik beschreibt, werden genau diese fünf Korrekturen hier als Patch auf den
 Original-Code angewendet (jeder Patch muss genau passen, sonst bricht das Skript ab).
 Zum Vergleich hält die Datei auch das Ergebnis des unveränderten Originals fest.
 
@@ -18,6 +18,11 @@ Zum Vergleich hält die Datei auch das Ergebnis des unveränderten Originals fes
 3. Fehlendes Leerzeichen, wenn der Satzteil mit "und"/"oder" endet: "Ich ging nach Hause und
    schlief" ergab "nach Hause  gegangenund", jetzt "nach Hause gegangen und". Der Zweig war
    trotz Kommentar ("müssen die Leerzeichen anders gesetzt werden") gleich wie der Else-Zweig.
+4. Bindestrich am Zeilenende nur nach einem Buchstaben als Worttrennung: Aus dem Seitenmarker
+   "--- Seite 2 ---" (Stufe 1) wurde "--- Seite 2 --" und die nächste Zeile hing ohne
+   Leerzeichen daran.
+5. Getrennte Wörter ("Jung- geselle") nur zwischen Buchstaben zusammenziehen: Aus einem
+   Zahlenbereich "5-" am Zeilenende und "10" auf der nächsten Zeile wurde "510".
 """
 import json
 import sys
@@ -37,6 +42,14 @@ PATCHES = [
      '                text = text.replace(match.group(0), f"{verbersetzung}{groups[0]} {hilfsverb}{groups[1]}',
      '            elif groups[1] in ["und", "oder"]:\n'
      '                text = text.replace(match.group(0), f"{verbersetzung}{groups[0]}{hilfsverb} {groups[1]}'),
+    # 4. Worttrennung am Zeilenende nur nach einem Buchstaben ([^\W\d_] = Buchstabe)
+    ("textstelle = re.sub(r'([^-])$', r'\\1 ', textstelle, flags=re.MULTILINE)",
+     "textstelle = re.sub(r'([^-]|[\\W\\d_]-)$', r'\\1 ', textstelle, flags=re.MULTILINE)"),
+    ("        textstelle = re.sub(r'-$', '', textstelle, flags=re.MULTILINE)",
+     "        textstelle = re.sub(r'([^\\W\\d_])-$', r'\\1', textstelle, flags=re.MULTILINE)"),
+    # 5. getrennte Wörter nur zwischen Buchstaben zusammenziehen (Zweig ohne Hervorhebung)
+    ("textstelle = re.sub(r'(\\w)-\\s(\\w)', r'\\1\\2', textstelle)",
+     "textstelle = re.sub(r'([^\\W\\d_])-\\s([^\\W\\d_])', r'\\1\\2', textstelle)"),
     # 1. OCR-Ersetzung nur am Wortanfang (Zweig ohne Hervorhebung)
     ('            textstelle = textstelle.replace(ausgangswort + " ", ersetzung + " ")\n'
      '            textstelle = textstelle.replace(ausgangswort.capitalize() + " ", ersetzung.capitalize() + " ")',
@@ -101,6 +114,9 @@ INPUTS = [
     "Ich war mit meiner Schwester im Kino und wir assen danach Pizza.",
     # Getrennte Verben (Zusammenfügung)
     "Er hat mich zurück gehalten und dann an gerufen.",
+    # Seitenmarker aus Stufe 1 und Bindestrich nach einer Zahl am Zeilenende
+    "Ich ging nach Hause.\n--- Seite 2 ---\nDort sah ich das Fahr-\nzeug.",
+    "--- Seite 1 ---\n\nWir zahlten 5-\n10 Franken.",
     # Mehrzeilige Aussage aus einem PDF
     "Ich habe die Tür ge-\nöffnet und bin hineingegangen. Dort sah ich\nmeinen Bruder, der am Boden lag.",
 ]
@@ -124,7 +140,7 @@ for text in INPUTS:
         cases.append({'modus': mode, 'eingabe': text, 'erwartet': expected, 'original': run(original, mode, text)})
 
 out = Path(__file__).resolve().parents[2] / 'tests/fixtures/pdf-einfuegen-golden.json'
-out.write_text(json.dumps({'quelle': 'pdf-einfuegen courtapi/converters.py mit 3 Korrekturen (siehe generate_golden.py)',
+out.write_text(json.dumps({'quelle': 'pdf-einfuegen courtapi/converters.py mit 5 Korrekturen (siehe generate_golden.py)',
                            'faelle': cases}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 differ = sum(c['erwartet'] != c['original'] for c in cases)
 print(f'{out}: {len(cases)} Fälle, davon {differ} mit abweichendem Original (Fehlerkorrekturen)')

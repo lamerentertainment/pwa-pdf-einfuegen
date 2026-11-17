@@ -28,11 +28,13 @@ Die App ist Open Source, damit jede und jeder nachprüfen kann, was sie tut.
    OCR-Fehler korrigieren, Umwandlung in indirekte Rede («Ich bin unschuldig» → «Er sei unschuldig»).
    Regeln und Wortlisten stammen aus «PDF einfügen» ([`src/process/rules.js`](src/process/rules.js),
    [`src/process/wordlists.json`](src/process/wordlists.json)). Die Tests prüfen das Ergebnis Zeichen für
-   Zeichen gegen die ursprüngliche Python-Umsetzung; drei Fehler des Originals sind dabei behoben
+   Zeichen gegen die ursprüngliche Python-Umsetzung; fünf Fehler des Originals sind dabei behoben
    (siehe [`scripts/pdf-einfuegen/generate_golden.py`](scripts/pdf-einfuegen/generate_golden.py)).
    Änderungen werden im Ergebnis hervorgehoben; beim Darüberfahren zeigt ein Hinweis, welche Regel
    ein Wort verändert hat, bei Wortlisten mit dem Eintrag («Pronomen: ich → er»), auch über mehrere
-   Regeln hinweg ([`src/process/herkunft.js`](src/process/herkunft.js)). Die einzelnen Schritte von «Zeilen zusammenfügen»
+   Regeln hinweg ([`src/process/herkunft.js`](src/process/herkunft.js)). Ein Klick auf ein Wort
+   erlaubt, die verantwortliche Regel zu entfernen oder für das Wort eine neue Regel anzulegen; ist
+   eine eingebaute Konvertierung gewählt, wird dafür eine eigene angelegt (mit «Rückgängig»). Die einzelnen Schritte von «Zeilen zusammenfügen»
    (Zeilenumbrüche, Worttrennungen, Leerzeichen, Anführungszeichen, Frankenbeträge, OCR-Korrekturen)
    lassen sich an- und abwählen. Neben den eingebauten Konvertierungen in die indirekte Rede (Mann/Frau)
    lassen sich eigene anlegen, etwa für Rechtsschriften («ich» → «der Beschuldigte»): Sie speichern nur

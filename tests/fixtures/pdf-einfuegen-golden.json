@@ -1,5 +1,5 @@
 {
-  "quelle": "pdf-einfuegen courtapi/converters.py mit 3 Korrekturen (siehe generate_golden.py)",
+  "quelle": "pdf-einfuegen courtapi/converters.py mit 5 Korrekturen (siehe generate_golden.py)",
   "faelle": [
     {
       "modus": "einfuegen",
@@ -576,6 +576,42 @@
       "eingabe": "Er hat mich zurück gehalten und dann an gerufen.",
       "erwartet": "Dieser habe sie/sich zurückgehalten und dann angerufen. ",
       "original": "Dieser habe sie/sich zurückgehalten und dann angerufen. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "Ich ging nach Hause.\n--- Seite 2 ---\nDort sah ich das Fahr-\nzeug.",
+      "erwartet": "Ich ging nach Hause. --- Seite 2 --- Dort sah ich das Fahrzeug. ",
+      "original": "Ich ging nach Hause. --- Seite 2 --Dort sah ich das Fahrzeug. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "Ich ging nach Hause.\n--- Seite 2 ---\nDort sah ich das Fahr-\nzeug.",
+      "erwartet": "Er sei nach Hause gegangen. --- Seite 2 --- Dort habe er das Fahrzeug gesehen. ",
+      "original": "Er sei nach Hause gegangen. --- Seite 2 --Dort habe er das Fahrzeug gesehen. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "Ich ging nach Hause.\n--- Seite 2 ---\nDort sah ich das Fahr-\nzeug.",
+      "erwartet": "Sie sei nach Hause gegangen. --- Seite 2 --- Dort habe sie das Fahrzeug gesehen. ",
+      "original": "Sie sei nach Hause gegangen. --- Seite 2 --Dort habe sie das Fahrzeug gesehen. "
+    },
+    {
+      "modus": "einfuegen",
+      "eingabe": "--- Seite 1 ---\n\nWir zahlten 5-\n10 Franken.",
+      "erwartet": "--- Seite 1 --- Wir zahlten 5- 10 Franken. ",
+      "original": "--- Seite 1 --Wir zahlten 510 Franken. "
+    },
+    {
+      "modus": "mann",
+      "eingabe": "--- Seite 1 ---\n\nWir zahlten 5-\n10 Franken.",
+      "erwartet": "--- Seite 1 --- Sie hätten 5- 10 Franken gezahlt. ",
+      "original": "--- Seite 1 --Sie hätten 510 Franken gezahlt. "
+    },
+    {
+      "modus": "frau",
+      "eingabe": "--- Seite 1 ---\n\nWir zahlten 5-\n10 Franken.",
+      "erwartet": "--- Seite 1 --- Sie hätten 5- 10 Franken gezahlt. ",
+      "original": "--- Seite 1 --Sie hätten 510 Franken gezahlt. "
     },
     {
       "modus": "einfuegen",

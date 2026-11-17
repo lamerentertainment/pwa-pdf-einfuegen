@@ -22,7 +22,7 @@ describe('herkunftProWort', () => {
 
     it('zeigt eine Kette über mehrere Regeln', () => {
         const h = herkunft('lch bin da.', mann);
-        expect(h.Er).toEqual([['ocrWoerter', ['lch', 'Ich']], ['pronomen', ['ich', 'er']]]);
+        expect(h.Er).toEqual([['ocr', ['lch', 'Ich']], ['pronomen', ['ich', 'er']]]);
         expect(h.sei).toEqual([['praesens', ['bin', 'sei']]]);
     });
 
@@ -56,7 +56,7 @@ describe('herkunftProWort', () => {
         const output = processText(input, mann);
         const ketten = herkunftProWort(input, output, mann);
         expect(ketten).toHaveLength(output.split(/\s+/).length);
-        expect(ketten[3].map(k => k.stufe)).toEqual(['ocrWoerter', 'pronomen']);
+        expect(ketten[3].map(k => k.stufe)).toEqual(['ocr', 'pronomen']);
     });
 
     it('liefert null, wenn das Ergebnis nicht zu den Regeln passt', () => {
@@ -64,7 +64,7 @@ describe('herkunftProWort', () => {
     });
 
     it('beachtet abgewählte Schritte', () => {
-        const schritte = { ...ALLE_SCHRITTE, ocrWoerter: false };
+        const schritte = { ...ALLE_SCHRITTE, ocr: false };
         const h = herkunft('lch bin da.', { schritte, listen: eingebauteListen('m') });
         expect(h.lch).toEqual([]);
     });

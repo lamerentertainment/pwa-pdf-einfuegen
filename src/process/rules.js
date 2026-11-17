@@ -3,20 +3,23 @@
 //
 // Die Umsetzung folgt dem Python-Original Schritt für Schritt; tests/rules.test.js prüft sie
 // Zeichen für Zeichen gegen dessen Ergebnisse (tests/fixtures/pdf-einfuegen-golden.json).
-// Drei Fehler des Originals sind behoben (siehe scripts/pdf-einfuegen/generate_golden.py):
+// Fünf Fehler des Originals sind behoben (siehe scripts/pdf-einfuegen/generate_golden.py):
 //   1. OCR-Ersetzungen nur am Wortanfang ("handeln" wurde zu "handeIn", "Milch" zu "MiIch")
 //   2. kein Absturz, wenn ein Satzzeichen direkt auf ein Verb im Präteritum folgt ("Ich ging.")
 //   3. Leerzeichen vor "und"/"oder" am Satzteilende: "nach Hause gegangen und" statt
 //      "nach Hause  gegangenund"
+//   4. Bindestrich am Zeilenende nur nach einem Buchstaben als Worttrennung: Seitenmarker
+//      "--- Seite 2 ---" aus Stufe 1 bleiben ganz
+//   5. Getrennte Wörter ("Jung- geselle") nur zwischen Buchstaben zusammenziehen: aus einem
+//      Zahlenbereich "5-↵10" wurde "510"
 //
 // Python-Eigenheiten, die hier nachgebildet sind:
 //   - \b und \w sind in Python Unicode-fähig (Umlaute zählen als Buchstaben), in JavaScript
-//     nicht: dafür stehen WORD, START und END.
+//     nicht: dafür stehen START und END.
 //   - str.replace ersetzt alle Vorkommen ohne Sonderzeichen: replaceAll() mit split/join.
 //   - str.capitalize() setzt den Rest des Worts in Kleinbuchstaben: capitalize().
 import lists from './wordlists.json';
 
-const WORD = '[\\p{L}\\p{N}_]';
 const START = '(?<![\\p{L}\\p{N}_])';
 const END = '(?![\\p{L}\\p{N}_])';
 const PUNCTUATION_AFTER_WORD = [' ', ',', '.', ';', '?', '!'];
@@ -132,13 +135,19 @@ export function ersetzeVergangenheitsform(text, verb, replacement, auxiliary) {
  * Originals («Text aus PDF einfügen»).
  */
 export const SCHRITTE = Object.freeze([
-    { id: 'umbrueche', label: 'Zeilenumbrüche entfernen', beispiel: 'Zeile↵Zeile → Zeile Zeile' },
-    { id: 'trennung', label: 'Worttrennungen auflösen', beispiel: '«Jung- geselle» → «Junggeselle»', hinweis: 'Ausschalten, wenn der Text Ergänzungsstriche enthält («Kantons- und Bundesrecht»)' },
-    { id: 'leerzeichen', label: 'Mehrfache Leerzeichen kürzen', beispiel: '«a␣␣b» → «a␣b»' },
-    { id: 'anfuehrungszeichen', label: 'Anführungszeichen vereinheitlichen', beispiel: '«» → "' },
-    { id: 'franken', label: 'Frankenbeträge vereinheitlichen', beispiel: '«CHF 50.00» → «Fr. 50.--»' },
-    { id: 'ocrZeichen', label: 'OCR: Zeichenfolgen korrigieren', beispiel: '«,,» → ", «o/o» → %, «nrv» → «rw»' },
-    { id: 'ocrWoerter', label: 'OCR: Wörter korrigieren', beispiel: '«lch» → «Ich», «lhnen» → «Ihnen»' },
+    { id: 'umbrueche', gruppe: 'zeilen', label: 'Zeilenumbrüche entfernen', beispiel: 'Zeile↵Zeile → Zeile Zeile' },
+    { id: 'trennung', gruppe: 'zeilen', label: 'Worttrennungen auflösen', beispiel: '«Jung- geselle» → «Junggeselle»', hinweis: 'Ausschalten, wenn der Text Ergänzungsstriche enthält («Kantons- und Bundesrecht»)' },
+    { id: 'leerzeichen', gruppe: 'zeilen', label: 'Mehrfache Leerzeichen kürzen', beispiel: '«a␣␣b» → «a␣b»' },
+    { id: 'anfuehrungszeichen', gruppe: 'zeichen', label: 'Anführungszeichen vereinheitlichen', beispiel: '«» → "' },
+    { id: 'franken', gruppe: 'zeichen', label: 'Frankenbeträge vereinheitlichen', beispiel: '«CHF 50.00» → «Fr. 50.--»' },
+    { id: 'ocr', gruppe: 'ocr', label: 'typische fehlerhafte OCR-Erkennungen korrigieren', beispiel: '«lch» → «Ich», «,,» → ", «o/o» → %, «enruähnt» → «erwähnt»' },
+]);
+
+/** Zusammengehörige Schritte für die Anzeige, in der Reihenfolge des Ablaufs. */
+export const SCHRITT_GRUPPEN = Object.freeze([
+    { id: 'zeilen', label: 'Zeilen und Wörter' },
+    { id: 'zeichen', label: 'Zeichen und Beträge' },
+    { id: 'ocr', label: 'Fehler der Texterkennung' },
 ]);
 
 /** Alle Schritte eingeschaltet (Standard). */
@@ -172,10 +181,12 @@ function ablauf(schritte, listen) {
                 // Leerzeichen am Zeilenende löschen
                 text = text.replace(/\s+$/gmu, '');
                 if (schritte.trennung) {
-                    // Am Zeilenende (ausser nach Bindestrich) ein Leerzeichen setzen
-                    text = text.replace(/([^-])$/gmu, '$1 ');
-                    // Bindestrich am Zeilenende löschen
-                    text = text.replace(/-$/gmu, '');
+                    // Am Zeilenende (ausser nach Trennstrich) ein Leerzeichen setzen und den
+                    // Trennstrich löschen. Als Trennstrich gilt nur ein Bindestrich direkt nach einem
+                    // Buchstaben ("Fahr-"), nicht der Schluss eines Seitenmarkers "--- Seite 2 ---"
+                    // (Korrektur 4)
+                    text = text.replace(/([^-]|[^\p{L}]-)$/gmu, '$1 ');
+                    text = text.replace(/(\p{L})-$/gmu, '$1');
                 } else {
                     // Bindestrich bleibt stehen («Kantons- und Bundesrecht»)
                     text = text.replace(/(.)$/gmu, '$1 ');
@@ -200,20 +211,25 @@ function ablauf(schritte, listen) {
     // Platzhalter für unbekannte Zeichen (immer)
     stufen.push({ id: 'steuerzeichen', run: text => replaceAll(text, '\u0000', '') });
     if (schritte.trennung) {
-        // getrennte Wörter: "Jung- geselle" → "Junggeselle"
-        stufen.push({ id: 'trennung', run: text => text.replace(new RegExp(`(${WORD})-\\s(${WORD})`, 'gu'), '$1$2') });
+        // getrennte Wörter: "Jung- geselle" → "Junggeselle"; nur zwischen Buchstaben, damit ein
+        // Zahlenbereich "5- 10" nicht zu "510" wird (Korrektur 5)
+        stufen.push({ id: 'trennung', run: text => text.replace(/(\p{L})-\s(\p{L})/gu, '$1$2') });
     }
-    if (schritte.ocrZeichen) {
-        stufen.push({
-            id: 'ocrZeichen',
-            run: text => [[',,', '"'], ['o/o', '%'], ['nrv', 'rw'], ['nry', 'rw']].reduce((t, [a, b]) => replaceAll(t, a, b), text),
-        });
-    }
-    if (schritte.ocrWoerter) {
-        stufen.push({
-            id: 'ocrWoerter',
-            run: (text, log) => proEintrag(text, lists.ocr, (t, [w, r]) => ersetzeWort(t, w, r, { ocr: true }), log),
-        });
+    if (schritte.ocr) {
+        // Zuerst Zeichenfolgen, dann die Wortliste ("lch" → "Ich"), wie im Original; zwei Stufen,
+        // damit die Herkunft eines Worts auch den Eintrag der Wortliste nennen kann
+        stufen.push(
+            {
+                id: 'ocrZeichen',
+                herkunft: 'ocr',
+                run: text => [[',,', '"'], ['o/o', '%'], ['nrv', 'rw'], ['nry', 'rw']].reduce((t, [a, b]) => replaceAll(t, a, b), text),
+            },
+            {
+                id: 'ocrWoerter',
+                herkunft: 'ocr',
+                run: (text, log) => proEintrag(text, lists.ocr, (t, [w, r]) => ersetzeWort(t, w, r, { ocr: true }), log),
+            },
+        );
     }
     if (listen) {
         const wort = (t, [w, r]) => ersetzeWort(t, w, r);
