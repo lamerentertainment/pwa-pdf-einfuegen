@@ -1,5 +1,5 @@
 {
-  "quelle": "pdf-einfuegen courtapi/converters.py mit 2 Korrekturen (siehe generate_golden.py)",
+  "quelle": "pdf-einfuegen courtapi/converters.py mit 3 Korrekturen (siehe generate_golden.py)",
   "faelle": [
     {
       "modus": "einfuegen",
@@ -316,13 +316,13 @@
     {
       "modus": "mann",
       "eingabe": "Ich trank Milch und ass.",
-      "erwartet": "Er habe Milch  getrunkenund habe gegessen. ",
+      "erwartet": "Er habe Milch getrunken und habe gegessen. ",
       "original": "ABSTURZ: IndexError: string index out of range"
     },
     {
       "modus": "frau",
       "eingabe": "Ich trank Milch und ass.",
-      "erwartet": "Sie habe Milch  getrunkenund habe gegessen. ",
+      "erwartet": "Sie habe Milch getrunken und habe gegessen. ",
       "original": "ABSTURZ: IndexError: string index out of range"
     },
     {
@@ -334,13 +334,13 @@
     {
       "modus": "mann",
       "eingabe": "Ich ging nach Hause und schlief sofort ein.",
-      "erwartet": "Er sei nach Hause  gegangenund habe sofort ein geschlafen. ",
+      "erwartet": "Er sei nach Hause gegangen und habe sofort ein geschlafen. ",
       "original": "Er sei nach Hause  gegangenund habe sofort ein geschlafen. "
     },
     {
       "modus": "frau",
       "eingabe": "Ich ging nach Hause und schlief sofort ein.",
-      "erwartet": "Sie sei nach Hause  gegangenund habe sofort ein geschlafen. ",
+      "erwartet": "Sie sei nach Hause gegangen und habe sofort ein geschlafen. ",
       "original": "Sie sei nach Hause  gegangenund habe sofort ein geschlafen. "
     },
     {
@@ -406,13 +406,13 @@
     {
       "modus": "mann",
       "eingabe": "Ich bekam Kost und Logis und arbeitete dafür.",
-      "erwartet": "Er habe Kost und Logis  bekommenund habe dafür gearbeitet. ",
+      "erwartet": "Er habe Kost und Logis bekommen und habe dafür gearbeitet. ",
       "original": "Er habe Kost und Logis  bekommenund habe dafür gearbeitet. "
     },
     {
       "modus": "frau",
       "eingabe": "Ich bekam Kost und Logis und arbeitete dafür.",
-      "erwartet": "Sie habe Kost und Logis  bekommenund habe dafür gearbeitet. ",
+      "erwartet": "Sie habe Kost und Logis bekommen und habe dafür gearbeitet. ",
       "original": "Sie habe Kost und Logis  bekommenund habe dafür gearbeitet. "
     },
     {
@@ -550,13 +550,13 @@
     {
       "modus": "mann",
       "eingabe": "Ich war mit meiner Schwester im Kino und wir assen danach Pizza.",
-      "erwartet": "Er sei mit seiner Schwester im Kino  gewesenund sie hätten danach Pizza gegessen. ",
+      "erwartet": "Er sei mit seiner Schwester im Kino gewesen und sie hätten danach Pizza gegessen. ",
       "original": "Er sei mit seiner Schwester im Kino  gewesenund sie hätten danach Pizza gegessen. "
     },
     {
       "modus": "frau",
       "eingabe": "Ich war mit meiner Schwester im Kino und wir assen danach Pizza.",
-      "erwartet": "Sie sei mit ihrer Schwester im Kino  gewesenund sie hätten danach Pizza gegessen. ",
+      "erwartet": "Sie sei mit ihrer Schwester im Kino gewesen und sie hätten danach Pizza gegessen. ",
       "original": "Sie sei mit ihrer Schwester im Kino  gewesenund sie hätten danach Pizza gegessen. "
     },
     {

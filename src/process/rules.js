@@ -3,9 +3,11 @@
 //
 // Die Umsetzung folgt dem Python-Original Schritt für Schritt; tests/rules.test.js prüft sie
 // Zeichen für Zeichen gegen dessen Ergebnisse (tests/fixtures/pdf-einfuegen-golden.json).
-// Zwei Fehler des Originals sind behoben (siehe scripts/pdf-einfuegen/generate_golden.py):
+// Drei Fehler des Originals sind behoben (siehe scripts/pdf-einfuegen/generate_golden.py):
 //   1. OCR-Ersetzungen nur am Wortanfang ("handeln" wurde zu "handeIn", "Milch" zu "MiIch")
 //   2. kein Absturz, wenn ein Satzzeichen direkt auf ein Verb im Präteritum folgt ("Ich ging.")
+//   3. Leerzeichen vor "und"/"oder" am Satzteilende: "nach Hause gegangen und" statt
+//      "nach Hause  gegangenund"
 //
 // Python-Eigenheiten, die hier nachgebildet sind:
 //   - \b und \w sind in Python Unicode-fähig (Umlaute zählen als Buchstaben), in JavaScript
@@ -114,7 +116,8 @@ export function ersetzeVergangenheitsform(text, verb, replacement, auxiliary) {
                 result = `${v}${g0}${g1}${g2} ${h}${g3}${g4}${g5}`;
             }
         } else if (CONJUNCTIONS.includes(g1)) {
-            result = `${v}${g0} ${h}${g1}${g2}${g3}${g4}${g5}`;
+            // Das Leerzeichen vor "und"/"oder" steht schon in g0 (Korrektur 3)
+            result = `${v}${g0}${h} ${g1}${g2}${g3}${g4}${g5}`;
         } else {
             result = `${v}${g0} ${h}${g1}${g2}${g3}${g4}${g5}`;
         }

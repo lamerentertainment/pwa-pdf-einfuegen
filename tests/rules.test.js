@@ -29,6 +29,11 @@ describe('Korrekturen gegenüber dem Original', () => {
         expect(vonPdfEinfuegen('lch war dort. "lch weiss es."')).toBe('Ich war dort. "Ich weiss es." ');
     });
 
+    it('setzt das Leerzeichen vor "und" am Satzteilende richtig', () => {
+        expect(alsAussageFormatieren('Ich ging nach Hause und schlief sofort ein.', 'm'))
+            .toBe('Er sei nach Hause gegangen und habe sofort ein geschlafen. ');
+    });
+
     it('stürzt nicht ab, wenn ein Satzzeichen direkt auf das Verb folgt', () => {
         expect(alsAussageFormatieren('Ich ging.', 'm')).toBe('Er sei gegangen. ');
     });

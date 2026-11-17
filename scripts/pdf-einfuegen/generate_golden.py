@@ -6,8 +6,8 @@ Umsetzung in src/process/rules.js Zeichen für Zeichen prüft.
 
 Aufruf:  python3 scripts/pdf-einfuegen/generate_golden.py ../pdf-einfuegen
 
-Zwei Fehler des Originals sind in der JavaScript-Umsetzung behoben. Damit die Referenz
-dieselbe Logik beschreibt, werden genau diese zwei Korrekturen hier als Patch auf den
+Drei Fehler des Originals sind in der JavaScript-Umsetzung behoben. Damit die Referenz
+dieselbe Logik beschreibt, werden genau diese drei Korrekturen hier als Patch auf den
 Original-Code angewendet (jeder Patch muss genau passen, sonst bricht das Skript ab).
 Zum Vergleich hält die Datei auch das Ergebnis des unveränderten Originals fest.
 
@@ -15,6 +15,9 @@ Zum Vergleich hält die Datei auch das Ergebnis des unveränderten Originals fes
    ("handeln" → "handeIn", "Regeln" → "RegeIn", "Milch" → "MiIch"). Jetzt nur am Wortanfang.
 2. Absturz (IndexError), wenn auf ein Verb im Präteritum direkt ein Satzzeichen folgt
    ("Ich ging."). groups[i][-1] wird zu groups[i][-1:].
+3. Fehlendes Leerzeichen, wenn der Satzteil mit "und"/"oder" endet: "Ich ging nach Hause und
+   schlief" ergab "nach Hause  gegangenund", jetzt "nach Hause gegangen und". Der Zweig war
+   trotz Kommentar ("müssen die Leerzeichen anders gesetzt werden") gleich wie der Else-Zweig.
 """
 import json
 import sys
@@ -29,6 +32,11 @@ PATCHES = [
     # 2. leere Gruppe ohne IndexError
     ("groups[0][-1].isdigit()", "groups[0][-1:].isdigit()"),
     ("groups[2][-1].isdigit()", "groups[2][-1:].isdigit()"),
+    # 3. Leerzeichen vor "und"/"oder" am Satzteilende (Zweig ohne Hervorhebung)
+    ('            elif groups[1] in ["und", "oder"]:\n'
+     '                text = text.replace(match.group(0), f"{verbersetzung}{groups[0]} {hilfsverb}{groups[1]}',
+     '            elif groups[1] in ["und", "oder"]:\n'
+     '                text = text.replace(match.group(0), f"{verbersetzung}{groups[0]}{hilfsverb} {groups[1]}'),
     # 1. OCR-Ersetzung nur am Wortanfang (Zweig ohne Hervorhebung)
     ('            textstelle = textstelle.replace(ausgangswort + " ", ersetzung + " ")\n'
      '            textstelle = textstelle.replace(ausgangswort.capitalize() + " ", ersetzung.capitalize() + " ")',
@@ -116,7 +124,7 @@ for text in INPUTS:
         cases.append({'modus': mode, 'eingabe': text, 'erwartet': expected, 'original': run(original, mode, text)})
 
 out = Path(__file__).resolve().parents[2] / 'tests/fixtures/pdf-einfuegen-golden.json'
-out.write_text(json.dumps({'quelle': 'pdf-einfuegen courtapi/converters.py mit 2 Korrekturen (siehe generate_golden.py)',
+out.write_text(json.dumps({'quelle': 'pdf-einfuegen courtapi/converters.py mit 3 Korrekturen (siehe generate_golden.py)',
                            'faelle': cases}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 differ = sum(c['erwartet'] != c['original'] for c in cases)
 print(f'{out}: {len(cases)} Fälle, davon {differ} mit abweichendem Original (Fehlerkorrekturen)')
