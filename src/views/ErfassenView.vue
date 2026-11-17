@@ -39,6 +39,20 @@ const fileInput = ref(null);
 const pageMarkers = ref(false);
 const copied = ref(false);
 const exampleMenu = ref(null);
+// Hover-Kästen (Modelle nach ID, «textaufbau»), die per Klick auf den Titel eingeklappt wurden
+// (bis die Maus den Bereich verlässt)
+const collapsed = ref(new Set());
+function toggleDetails(id) {
+    const next = new Set(collapsed.value);
+    if (!next.delete(id)) next.add(id);
+    collapsed.value = next;
+}
+function resetDetails(id) {
+    if (!collapsed.value.has(id)) return;
+    const next = new Set(collapsed.value);
+    next.delete(id);
+    collapsed.value = next;
+}
 
 async function refreshModels() {
     status.value = Object.fromEntries(await Promise.all(
@@ -125,9 +139,10 @@ function noticeText(notice) {
       <div class="card-body gap-4">
         <h2 class="card-title">1 · PDF-Seiten (mit Text- und/oder Layouterkennung) erfassen</h2>
         <p class="text-sm opacity-80">
-          Digitale Seiten liefern ihren Text direkt. Gescannte Seiten werden mit der lokalen Texterkennung gelesen.
-          Danach stehen PDF und Text nebeneinander, damit du die Erfassung prüfen und korrigieren kannst.
-          Das PDF verlässt dabei deinen Browser nicht und wird nirgends gespeichert.
+          Bei digital erzeugten PDF wird der mitgelieferte Text ausgelesen. Gescannte Seiten werden, soweit aktiviert,
+          mit den lokal installierten Text- und Layouterkennungsmodellen gelesen.
+          Danach stehen PDF und Text zur Prüfung und Korrektur der Erfassung nebeneinander.
+          Das PDF verlässt dabei deinen Browser nie und wird nicht dauerhaft gespeichert.
         </p>
 
         <!-- 1. Modelle und Einstellungen: vor dem Einlesen festlegen -->
@@ -135,22 +150,33 @@ function noticeText(notice) {
           <h3 class="font-semibold">1 · Modelle und Einstellungen</h3>
 
           <div>
-            <p class="mb-2 text-sm opacity-80">
-              <strong>Modelle</strong> wirken beim Einlesen und nur auf gescannten Seiten – ausser du lässt auch digitale Seiten erkennen. Digitale PDFs brauchen keines.
-              Einzelne Seiten lassen sich nach dem Einlesen in der Prüfansicht mit anderer Einstellung neu erfassen.
-            </p>
             <div class="grid items-start gap-3 xl:grid-cols-2">
               <div
                 v-for="model in captureModels"
                 :key="model.id"
-                class="flex flex-col gap-3 rounded-box border p-3"
+                class="group relative flex flex-col gap-3 rounded-box border p-3 hover:z-30 has-[:focus-visible]:z-30 has-[select:focus]:z-30"
                 :class="isInstalled(model) ? 'border-success/40 bg-success/5' : 'border-base-300'"
                 :data-model="model.id"
+                @mouseleave="resetDetails(model.id)"
               >
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
-                    <p class="font-medium">{{ model.name }}</p>
-                    <p class="text-xs opacity-70">{{ model.purpose }} {{ formatBytes(modelSize(model)) }}.</p>
+                    <button
+                      type="button"
+                      class="flex cursor-pointer items-center gap-1 text-left font-medium"
+                      :aria-expanded="!collapsed.has(model.id)"
+                      :title="collapsed.has(model.id) ? 'Details einblenden' : 'Details einklappen'"
+                      data-testid="modell-titel"
+                      @click="toggleDetails(model.id)"
+                    >
+                      {{ model.name }}
+                      <ChevronDownIcon
+                        class="size-3.5 opacity-50 transition-transform"
+                        :class="{ 'group-hover:rotate-180': !collapsed.has(model.id) }"
+                        aria-hidden="true"
+                      />
+                    </button>
+                    <p class="text-xs opacity-70">{{ model.summary ?? model.purpose }} {{ formatBytes(modelSize(model)) }}.</p>
                   </div>
                   <div class="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
                     <span class="badge badge-sm whitespace-nowrap" :class="isInstalled(model) ? 'badge-success' : 'badge-warning'">
@@ -165,7 +191,7 @@ function noticeText(notice) {
                         :aria-label="`${model.name} aktiviert`"
                         data-testid="aktiviert"
                       />
-                      aktiviert
+                      {{ active[model.option].value ? 'aktiviert' : 'deaktiviert' }}
                     </label>
                   </div>
                 </div>
@@ -177,83 +203,118 @@ function noticeText(notice) {
                   Braucht die installierte und aktivierte {{ modelById(model.requires)?.name }}.
                 </p>
 
-                <!-- Einstellungen, die zu diesem Modell gehören -->
+                <!-- Einstellungen und Details: nur eingeblendet, solange die Maus über der Karte
+                     oder dem Kasten ist (bzw. ein Feld darin per Tastatur oder Auswahlliste fokussiert).
+                     Klick auf den Titel klappt ihn ein bzw. wieder aus. -->
                 <div
-                  v-if="model.option === 'ocr'"
-                  class="flex flex-col gap-1.5 text-sm"
-                  :class="{ 'opacity-50': !isEffective(model) }"
+                  v-show="!collapsed.has(model.id)"
+                  class="absolute inset-x-0 top-full z-30 hidden pt-1 group-hover:block group-has-[:focus-visible]:block group-has-[select:focus]:block"
+                  data-testid="modell-details"
                 >
-                  <label class="flex items-center gap-2">
-                    <input v-model="documentState.options.markUncertain" type="checkbox" class="checkbox checkbox-sm" :disabled="!isEffective(model)" />
-                    Unsichere Zeilen im Text mit [?] markieren
-                  </label>
-                  <label class="flex items-start gap-2">
-                    <input v-model="documentState.options.forceOcr" type="checkbox" class="checkbox checkbox-sm mt-0.5" :disabled="!isEffective(model)" data-testid="force-ocr" />
-                    <span>
-                      Auch digitale Seiten erkennen
-                      <span class="block text-xs opacity-70">Übergeht den eingebetteten Text und liest jede Seite mit der Texterkennung (und dem Layoutmodell, falls aktiviert). Langsamer.</span>
-                    </span>
-                  </label>
-                </div>
-                <div
-                  v-if="model.option === 'layout'"
-                  class="flex flex-col gap-1.5 text-sm"
-                  :class="{ 'opacity-50': !isEffective(model) }"
-                  data-testid="layout-optionen"
-                >
-                  <label class="flex items-center gap-2">
-                    <input v-model="documentState.options.headings" type="checkbox" class="checkbox checkbox-sm" :disabled="!isEffective(model)" />
-                    Überschriften als Markdown (#) formatieren
-                  </label>
-                  <label class="flex items-center gap-2">
-                    Fussnoten
-                    <select v-model="documentState.options.footnotes" class="select select-xs w-auto" :disabled="!isEffective(model)" aria-label="Fussnoten">
-                      <option value="seite">an ihrer Stelle belassen</option>
-                      <option value="dokument">ans Dokumentende setzen</option>
-                      <option value="markdown">als Markdown-Fussnoten [^1] ans Dokumentende setzen</option>
-                    </select>
-                  </label>
-                  <label class="flex items-center gap-2">
-                    <input v-model="documentState.options.placeholders" type="checkbox" class="checkbox checkbox-sm" :disabled="!isEffective(model)" />
-                    Platzhalter für Bilder (mit Bildunterschrift) und Stempel
-                  </label>
-                </div>
+                  <div class="flex flex-col gap-3 rounded-box border border-base-300 bg-base-100 p-3 shadow-lg">
+                    <!-- Einstellungen, die zu diesem Modell gehören -->
+                    <p class="-mb-1.5 text-xs font-semibold uppercase tracking-wide opacity-70">Modellkonfiguration</p>
+                    <div
+                      v-if="model.option === 'ocr'"
+                      class="flex flex-col gap-1.5 text-sm"
+                      :class="{ 'opacity-50': !isEffective(model) }"
+                    >
+                      <label class="flex items-center gap-2">
+                        <input v-model="documentState.options.markUncertain" type="checkbox" class="checkbox checkbox-sm" :disabled="!isEffective(model)" />
+                        Unsichere Zeilen im Text mit [?] markieren
+                      </label>
+                      <label class="flex items-start gap-2">
+                        <input v-model="documentState.options.forceOcr" type="checkbox" class="checkbox checkbox-sm mt-0.5" :disabled="!isEffective(model)" data-testid="force-ocr" />
+                        <span>
+                          Auch digitale Seiten erkennen
+                          <span class="block text-xs opacity-70">Übergeht den eingebetteten Text und liest jede Seite mit der Texterkennung (und dem Layoutmodell, falls aktiviert). Langsamer.</span>
+                        </span>
+                      </label>
+                    </div>
+                    <div
+                      v-if="model.option === 'layout'"
+                      class="flex flex-col gap-1.5 text-sm"
+                      :class="{ 'opacity-50': !isEffective(model) }"
+                      data-testid="layout-optionen"
+                    >
+                      <label class="flex items-center gap-2">
+                        <input v-model="documentState.options.headings" type="checkbox" class="checkbox checkbox-sm" :disabled="!isEffective(model)" />
+                        Überschriften als Markdown (#) formatieren
+                      </label>
+                      <label class="flex items-center gap-2">
+                        Fussnoten
+                        <select v-model="documentState.options.footnotes" class="select select-xs w-auto" :disabled="!isEffective(model)" aria-label="Fussnoten">
+                          <option value="seite">an ihrer Stelle belassen</option>
+                          <option value="dokument">ans Dokumentende setzen</option>
+                          <option value="markdown">als Markdown-Fussnoten [^1] ans Dokumentende setzen</option>
+                        </select>
+                      </label>
+                      <label class="flex items-center gap-2">
+                        <input v-model="documentState.options.placeholders" type="checkbox" class="checkbox checkbox-sm" :disabled="!isEffective(model)" />
+                        Platzhalter für Bilder (mit Bildunterschrift) und Stempel
+                      </label>
+                    </div>
 
-                <details class="border-t border-base-300 pt-2 text-sm" data-testid="modell-details">
-                  <summary class="cursor-pointer select-none text-xs font-semibold uppercase tracking-wide opacity-70">Was das Modell kann</summary>
-                  <div class="mt-2 space-y-2">
-                    <ModelInfo :model="model" compact bare />
-                    <p class="text-xs opacity-70">{{ model.usage }}</p>
+                    <div class="space-y-2 border-t border-base-300 pt-2 text-sm">
+                      <p class="text-xs font-semibold uppercase tracking-wide opacity-70">Was das Modell kann</p>
+                      <p v-if="model.summary" class="text-xs opacity-70">{{ model.purpose }}</p>
+                      <ModelInfo :model="model" compact bare />
+                      <p class="text-xs opacity-70">{{ model.usage }}</p>
+                    </div>
                   </div>
-                </details>
+                </div>
               </div>
             </div>
           </div>
 
-          <div>
-            <p class="mb-2 text-sm opacity-80">
-              <strong>Textaufbau</strong> braucht kein Modell und lässt sich später in der Prüfansicht ändern, ohne das PDF neu einzulesen.
-            </p>
-            <div class="grid gap-x-8 gap-y-2 text-sm md:grid-cols-2">
-              <label class="flex items-center gap-2">
-                <input v-model="documentState.options.structure" type="checkbox" class="checkbox checkbox-sm" />
-                Einrückungen und Spalten-Text erhalten
-              </label>
-              <label class="flex items-center gap-2">
-                <input v-model="documentState.options.tables" type="checkbox" class="checkbox checkbox-sm" />
-                <span>
-                  Tabellen als Markdown formatieren
-                  <span class="text-xs opacity-70">{{ documentState.options.layout ? '(Scans: in den Tabellenbereichen des Layoutmodells, ab 2 Spalten; sonst ab 3 Spalten)' : '(ab 3 Spalten)' }}</span>
-                </span>
-              </label>
-              <label class="flex items-center gap-2">
-                <input v-model="documentState.options.lists" type="checkbox" class="checkbox checkbox-sm" />
-                Aufzählungen als Markdown (-) formatieren
-              </label>
-              <label class="flex items-center gap-2">
-                <input v-model="documentState.options.keepLineNumbers" type="checkbox" class="checkbox checkbox-sm" />
-                Zeilennummern am Rand behalten
-              </label>
+          <!-- Konfiguration des Textaufbaus: Optionen nur beim Darüberfahren (Klick auf den Titel klappt ein) -->
+          <div class="group relative w-fit" @mouseleave="resetDetails('textaufbau')">
+            <button
+              type="button"
+              class="flex cursor-pointer items-center gap-1 text-left text-sm font-semibold"
+              :aria-expanded="!collapsed.has('textaufbau')"
+              :title="collapsed.has('textaufbau') ? 'Optionen einblenden' : 'Optionen einklappen'"
+              data-testid="textaufbau-titel"
+              @click="toggleDetails('textaufbau')"
+            >
+              Konfiguration des Textaufbaus
+              <ChevronDownIcon
+                class="size-3.5 opacity-50 transition-transform"
+                :class="{ 'group-hover:rotate-180': !collapsed.has('textaufbau') }"
+                aria-hidden="true"
+              />
+            </button>
+            <div
+              v-show="!collapsed.has('textaufbau')"
+              class="absolute left-0 top-full z-30 hidden w-max max-w-[min(42rem,calc(100vw-4rem))] pt-1 group-hover:block group-has-[:focus-visible]:block"
+              data-testid="textaufbau-optionen"
+            >
+              <div class="flex flex-col gap-3 rounded-box border border-base-300 bg-base-100 p-3 shadow-lg">
+                <p class="text-xs opacity-70">
+                  Braucht kein Modell und lässt sich später in der Prüfansicht ändern, ohne das PDF neu einzulesen.
+                </p>
+                <div class="flex flex-col gap-1.5 text-sm">
+                  <label class="flex items-center gap-2">
+                    <input v-model="documentState.options.structure" type="checkbox" class="checkbox checkbox-sm" />
+                    Einrückungen und Spalten-Formatierung erhalten
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <input v-model="documentState.options.tables" type="checkbox" class="checkbox checkbox-sm" />
+                    <span>
+                      Tabellen als Markdown formatieren
+                      <span class="text-xs opacity-70">{{ documentState.options.layout ? '(Scans: in den Tabellenbereichen des Layoutmodells, ab 2 Spalten; sonst ab 3 Spalten)' : '(ab 3 Spalten)' }}</span>
+                    </span>
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <input v-model="documentState.options.lists" type="checkbox" class="checkbox checkbox-sm" />
+                    Aufzählungen mit «-» als Markdown formatieren
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <input v-model="documentState.options.keepLineNumbers" type="checkbox" class="checkbox checkbox-sm" />
+                    Allfällige bestehende Zeilennummern am linken Rand beibehalten
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         </div>

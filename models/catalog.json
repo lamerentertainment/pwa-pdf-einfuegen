@@ -44,6 +44,7 @@
     {
       "id": "pp-doclayout-plus-l",
       "name": "Layoutmodell (PP-DocLayout_plus-L)",
+      "summary": "Erkennt den Aufbau gescannter Seiten.",
       "purpose": "Erkennt den Aufbau gescannter Seiten; er lässt sich nachträglich anpassen und bearbeiten («Bereiche bearbeiten» in der Prüfansicht). Die Verwendung ist optional: Das Ergebnis ist nicht in allen Fällen überzeugender als mit der reinen Texterkennung, und Erkennung und Verarbeitung dauern länger.",
       "capabilities": [
         "Erkennt Bereiche wie Überschriften, Textblöcke, Tabellen, Fussnoten, Randnotizen, Stempel sowie Kopf- und Fusszeilen auf gescannten Seiten.",

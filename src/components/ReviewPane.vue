@@ -383,9 +383,9 @@ function reset() {
         <summary class="cursor-pointer select-none">Textaufbau anpassen</summary>
         <div class="mt-2 flex flex-col gap-1.5 rounded-box border border-base-300 bg-base-100 p-3">
           <label class="flex items-center gap-2"><input v-model="draft.tables" type="checkbox" class="checkbox checkbox-xs" /> Tabellen als Markdown formatieren</label>
-          <label class="flex items-center gap-2"><input v-model="draft.lists" type="checkbox" class="checkbox checkbox-xs" /> Aufzählungen als Markdown (-) formatieren</label>
-          <label class="flex items-center gap-2"><input v-model="draft.structure" type="checkbox" class="checkbox checkbox-xs" /> Einrückungen und Spalten-Text erhalten</label>
-          <label class="flex items-center gap-2"><input v-model="draft.keepLineNumbers" type="checkbox" class="checkbox checkbox-xs" /> Zeilennummern am Rand behalten</label>
+          <label class="flex items-center gap-2"><input v-model="draft.lists" type="checkbox" class="checkbox checkbox-xs" /> Aufzählungen mit «-» als Markdown formatieren</label>
+          <label class="flex items-center gap-2"><input v-model="draft.structure" type="checkbox" class="checkbox checkbox-xs" /> Einrückungen und Spalten-Formatierung erhalten</label>
+          <label class="flex items-center gap-2"><input v-model="draft.keepLineNumbers" type="checkbox" class="checkbox checkbox-xs" /> Allfällige bestehende Zeilennummern am linken Rand beibehalten</label>
           <label class="flex items-center gap-2" :class="{ 'opacity-50': !hasOcr }" :title="hasOcr ? 'Wirkt nur auf Seiten aus der Texterkennung' : 'Keine Seite dieses Dokuments stammt aus der Texterkennung'">
             <input v-model="draft.markUncertain" type="checkbox" class="checkbox checkbox-xs" :disabled="!hasOcr" /> Unsichere Zeilen mit [?] markieren
             <span v-if="!hasOcr" class="text-xs opacity-70">(nur bei Texterkennung)</span>
