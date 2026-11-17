@@ -144,63 +144,97 @@ export const SCHRITTE = Object.freeze([
 /** Alle Schritte eingeschaltet (Standard). */
 export const ALLE_SCHRITTE = Object.freeze(Object.fromEntries(SCHRITTE.map(s => [s.id, true])));
 
-/** Zeilenumbrüche, Worttrennungen und typische Formatierungen aus kopiertem PDF-Text bereinigen. */
-export function zeilenumbruecheEntfernen(text, schritte = ALLE_SCHRITTE) {
-    // Windows-Zeilenenden vereinheitlichen (Textfelder liefern ohnehin \n)
-    text = text.replace(/\r\n?/g, '\n');
-    if (schritte.umbrueche) {
-        // Leerzeichen am Zeilenende löschen
-        text = text.replace(/\s+$/gmu, '');
-        if (schritte.trennung) {
-            // Am Zeilenende (ausser nach Bindestrich) ein Leerzeichen setzen
-            text = text.replace(/([^-])$/gmu, '$1 ');
-            // Bindestrich am Zeilenende löschen
-            text = text.replace(/-$/gmu, '');
-        } else {
-            // Bindestrich bleibt stehen («Kantons- und Bundesrecht»)
-            text = text.replace(/(.)$/gmu, '$1 ');
-        }
-        text = replaceAll(text, '\n', '');
-        text = replaceAll(text, '\r', '');
-    }
-    if (schritte.leerzeichen) {
-        // doppelte und dreifache Leerzeichen
-        text = replaceAll(text, '  ', ' ');
-        text = replaceAll(text, '   ', ' ');
-    }
-    if (schritte.anfuehrungszeichen) {
-        // «» → "
-        text = replaceAll(text, '«', '"');
-        text = replaceAll(text, '»', '"');
-    }
-    if (schritte.franken) {
-        text = replaceAll(text, ' CHF ', ' Fr. ');
-        text = replaceAll(text, ' SFR ', ' Fr. ');
-        text = replaceAll(text, '.00 ', '.-- ');
-    }
-    // Platzhalter für unbekannte Zeichen (immer)
-    text = replaceAll(text, '\u0000', '');
-    if (schritte.trennung) {
-        // getrennte Wörter: "Jung- geselle" → "Junggeselle"
-        text = text.replace(new RegExp(`(${WORD})-\\s(${WORD})`, 'gu'), '$1$2');
+// Ersetzt Eintrag für Eintrag; mit `log` werden die Einträge festgehalten, die etwas verändert haben
+function proEintrag(text, eintraege, ersetze, log) {
+    for (const eintrag of eintraege) {
+        const next = ersetze(text, eintrag);
+        if (log && next !== text) log.push(eintrag);
+        text = next;
     }
     return text;
 }
 
-/** Typische Fehler der Texterkennung ("lch" statt "Ich", ",," statt Anführungszeichen). */
-export function ocrErsetzung(text, schritte = ALLE_SCHRITTE) {
+/**
+ * Der ganze Ablauf als Folge von Stufen, in der Reihenfolge des Originals. `herkunft` ist die
+ * Regel, der eine Wortänderung dieser Stufe zugeschrieben wird (siehe herkunft.js).
+ */
+function ablauf(schritte, listen) {
+    const stufen = [
+        // Windows-Zeilenenden vereinheitlichen (Textfelder liefern ohnehin \n)
+        { id: 'zeilenenden', run: text => text.replace(/\r\n?/g, '\n') },
+    ];
+    if (schritte.umbrueche) {
+        stufen.push({
+            id: 'umbrueche',
+            // Wörter verändert hier nur das Zusammenfügen getrennter Wörter am Zeilenende
+            herkunft: 'trennung',
+            run: text => {
+                // Leerzeichen am Zeilenende löschen
+                text = text.replace(/\s+$/gmu, '');
+                if (schritte.trennung) {
+                    // Am Zeilenende (ausser nach Bindestrich) ein Leerzeichen setzen
+                    text = text.replace(/([^-])$/gmu, '$1 ');
+                    // Bindestrich am Zeilenende löschen
+                    text = text.replace(/-$/gmu, '');
+                } else {
+                    // Bindestrich bleibt stehen («Kantons- und Bundesrecht»)
+                    text = text.replace(/(.)$/gmu, '$1 ');
+                }
+                return replaceAll(replaceAll(text, '\n', ''), '\r', '');
+            },
+        });
+    }
+    if (schritte.leerzeichen) {
+        // doppelte und dreifache Leerzeichen
+        stufen.push({ id: 'leerzeichen', run: text => replaceAll(replaceAll(text, '  ', ' '), '   ', ' ') });
+    }
+    if (schritte.anfuehrungszeichen) {
+        stufen.push({ id: 'anfuehrungszeichen', run: text => replaceAll(replaceAll(text, '«', '"'), '»', '"') });
+    }
+    if (schritte.franken) {
+        stufen.push({
+            id: 'franken',
+            run: text => replaceAll(replaceAll(replaceAll(text, ' CHF ', ' Fr. '), ' SFR ', ' Fr. '), '.00 ', '.-- '),
+        });
+    }
+    // Platzhalter für unbekannte Zeichen (immer)
+    stufen.push({ id: 'steuerzeichen', run: text => replaceAll(text, '\u0000', '') });
+    if (schritte.trennung) {
+        // getrennte Wörter: "Jung- geselle" → "Junggeselle"
+        stufen.push({ id: 'trennung', run: text => text.replace(new RegExp(`(${WORD})-\\s(${WORD})`, 'gu'), '$1$2') });
+    }
     if (schritte.ocrZeichen) {
-        text = replaceAll(text, ',,', '"');
-        text = replaceAll(text, 'o/o', '%');
-        text = replaceAll(text, 'nrv', 'rw');
-        text = replaceAll(text, 'nry', 'rw');
+        stufen.push({
+            id: 'ocrZeichen',
+            run: text => [[',,', '"'], ['o/o', '%'], ['nrv', 'rw'], ['nry', 'rw']].reduce((t, [a, b]) => replaceAll(t, a, b), text),
+        });
     }
     if (schritte.ocrWoerter) {
-        for (const [word, replacement] of lists.ocr) {
-            text = ersetzeWort(text, word, replacement, { ocr: true });
-        }
+        stufen.push({
+            id: 'ocrWoerter',
+            run: (text, log) => proEintrag(text, lists.ocr, (t, [w, r]) => ersetzeWort(t, w, r, { ocr: true }), log),
+        });
     }
-    return text;
+    if (listen) {
+        const wort = (t, [w, r]) => ersetzeWort(t, w, r);
+        stufen.push(
+            { id: 'pronomen', run: (text, log) => proEintrag(text, listen.pronomen, wort, log) },
+            {
+                id: 'praeteritum',
+                run: (text, log) => proEintrag(text, listen.praeteritum, (t, [v, r, h]) => ersetzeVergangenheitsform(t, escapeRegExp(v), r, h), log),
+            },
+            { id: 'praesens', run: (text, log) => proEintrag(text, listen.praesens, wort, log) },
+            { id: 'zusammenfuegung', run: (text, log) => proEintrag(text, listen.zusammenfuegung, wort, log) },
+        );
+    }
+    return stufen;
+}
+
+const BEREINIGUNG = new Set(['zeilenenden', 'umbrueche', 'leerzeichen', 'anfuehrungszeichen', 'franken', 'steuerzeichen', 'trennung']);
+
+/** Zeilenumbrüche, Worttrennungen und typische Formatierungen aus kopiertem PDF-Text bereinigen. */
+export function zeilenumbruecheEntfernen(text, schritte = ALLE_SCHRITTE) {
+    return ablauf(schritte, null).filter(s => BEREINIGUNG.has(s.id)).reduce((t, s) => s.run(t), text);
 }
 
 /** Die eingebauten Wortlisten einer Konvertierung (indirekte Rede, Mann oder Frau). */
@@ -213,38 +247,27 @@ export function eingebauteListen(geschlecht = 'm') {
     };
 }
 
-export function pronomenErsetzung(text, geschlecht = 'm') {
-    return ersetzePronomen(text, eingebauteListen(geschlecht).pronomen);
-}
-
-function ersetzePronomen(text, pronomen) {
-    for (const [word, replacement] of pronomen) {
-        text = ersetzeWort(text, word, replacement);
-    }
-    return text;
-}
-
-export function verbenErsetzung(text, listen = eingebauteListen()) {
-    for (const [verb, replacement, auxiliary] of listen.praeteritum) {
-        text = ersetzeVergangenheitsform(text, escapeRegExp(verb), replacement, auxiliary);
-    }
-    for (const [word, replacement] of listen.praesens) {
-        text = ersetzeWort(text, word, replacement);
-    }
-    for (const [word, replacement] of listen.zusammenfuegung) {
-        text = ersetzeWort(text, word, replacement);
-    }
-    return text;
-}
-
 /**
  * Bereinigung (gewählte Schritte) und, falls `listen` angegeben, Konvertierung: Pronomen, dann
  * Verben im Präteritum und Präsens, dann Zusammenschreibung – wie im Original.
  */
 export function verarbeite(text, { schritte = ALLE_SCHRITTE, listen = null } = {}) {
-    text = ocrErsetzung(zeilenumbruecheEntfernen(text, schritte), schritte);
-    if (!listen) return text;
-    return verbenErsetzung(ersetzePronomen(text, listen.pronomen), listen);
+    return ablauf(schritte, listen).reduce((t, s) => s.run(t), text);
+}
+
+/**
+ * Wie verarbeite(), aber mit dem Text nach jeder Stufe und den Wortlisten-Einträgen, die dort
+ * etwas verändert haben. Grundlage für die Anzeige, welche Regel ein Wort verändert hat.
+ * @returns {Array<{id: string, herkunft: string, text: string, angewendet: Array}>} erste Stufe: Eingabe
+ */
+export function zwischenstaende(text, { schritte = ALLE_SCHRITTE, listen = null } = {}) {
+    const result = [{ id: 'eingabe', herkunft: 'eingabe', text, angewendet: [] }];
+    for (const stufe of ablauf(schritte, listen)) {
+        const angewendet = [];
+        text = stufe.run(text, angewendet);
+        result.push({ id: stufe.id, herkunft: stufe.herkunft ?? stufe.id, text, angewendet });
+    }
+    return result;
 }
 
 /** «Text aus PDF einfügen»: Zeilen zusammenfügen und OCR-Fehler korrigieren. */
@@ -262,13 +285,15 @@ export function alsAussageFormatieren(text, geschlecht = 'm') {
  * zu einem einzigen Absatz; bei längeren Texten aus Stufe 1 bleiben so die Absätze erhalten.
  */
 export function processText(text, options = {}, { keepParagraphs = true } = {}) {
-    const run = paragraph => verarbeite(paragraph, options);
-    if (!keepParagraphs) return run(text).trim();
+    return absaetze(text, keepParagraphs).map(paragraph => verarbeite(paragraph, options).trim()).join('\n\n');
+}
+
+/** Die Absätze, die processText einzeln verarbeitet. */
+export function absaetze(text, keepParagraphs = true) {
+    if (!keepParagraphs) return [text];
     return text
         .replace(/\r\n?/g, '\n')
         .split(/\n[ \t]*\n/)
         .map(paragraph => paragraph.trim())
-        .filter(Boolean)
-        .map(paragraph => run(paragraph).trim())
-        .join('\n\n');
+        .filter(Boolean);
 }

@@ -4,7 +4,8 @@ import { ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, ClipboardDocumentIcon, Co
 import { documentState } from '../capture/documentStore.js';
 import { joinPages } from '../capture/joinPages.js';
 import { ALLE_SCHRITTE, processText, SCHRITTE, WORDLIST_SOURCE } from '../process/rules.js';
-import { findeKonvertierung, istAusgeblendet, konvertierungen, listenFuer, sichtbareKonvertierungen } from '../process/konvertierungen.js';
+import { findeKonvertierung, istAusgeblendet, konvertierungen, LISTEN, listenFuer, sichtbareKonvertierungen, zeilen } from '../process/konvertierungen.js';
+import { beschreibeHerkunft, herkunftProWort } from '../process/herkunft.js';
 import KonvertierungenDialog from '../components/KonvertierungenDialog.vue';
 import { diffParagraphs } from '../process/diff.js';
 import { mapPosition } from '../process/align.js';
@@ -67,13 +68,55 @@ const tokens = computed(() => {
     const list = diffParagraphs(input.value, output.value);
     if (!list) return null;
     let cursor = 0;
+    let index = 0;
     return list.map(token => {
         const start = output.value.indexOf(token.text, cursor);
         const at = start >= 0 ? start : cursor;
         cursor = at + token.text.length;
-        return { ...token, start: at, end: cursor, word: !/^\s+$/.test(token.text) };
+        const word = !/^\s+$/.test(token.text);
+        return { ...token, start: at, end: cursor, word, index: word ? index++ : -1 };
     });
 });
+
+// --- Darüberfahren: welche Regel hat ein Wort verändert? ---
+const listen = computed(() => (konv.value ? listenFuer(konv.value) : null));
+const herkunft = computed(() => {
+    if (!tokens.value) return null;
+    try {
+        return herkunftProWort(input.value, output.value, { schritte: schritte.value, listen: listen.value, keepParagraphs: keepParagraphs.value });
+    } catch (err) {
+        console.error(err);
+        return null;
+    }
+});
+// Eigene Einträge der gewählten Konvertierung, um sie im Hinweis zu kennzeichnen
+const eigeneEintraege = computed(() => {
+    const set = new Set();
+    if (konv.value && !konv.value.eingebaut) {
+        for (const l of LISTEN) {
+            for (const z of zeilen(konv.value, l.id)) if (z.stand === 'neu' || z.stand === 'geaendert') set.add(`${l.id}\u0000${z.eintrag.join('\u0000')}`);
+        }
+    }
+    return set;
+});
+const istEigen = (stufe, eintrag) => eigeneEintraege.value.has(`${stufe}\u0000${eintrag.join('\u0000')}`);
+
+const hinweis = reactive({ zeilen: null, x: 0, y: 0 });
+function zeigeHerkunft(event) {
+    const span = event.target.closest?.('[data-index]');
+    const token = span && tokens.value?.find(t => t.index === Number(span.dataset.index));
+    if (!token?.changed || !herkunft.value) {
+        hinweis.zeilen = null;
+        return;
+    }
+    const kette = herkunft.value[token.index] ?? [];
+    hinweis.zeilen = kette.length
+        ? beschreibeHerkunft(kette, istEigen)
+        : [{ label: 'Verändert', regel: 'Die Regel lässt sich nicht eindeutig bestimmen.', eigen: false }];
+    const rect = span.getBoundingClientRect();
+    hinweis.x = Math.max(8, Math.min(rect.left, window.innerWidth - 368));
+    hinweis.y = rect.bottom + 6;
+}
 // Erkannte Fundstellen (wie die Makros «BGerAufruf» und «GesetzAufruf»): im Ergebnis, weil dort
 // Zeilenumbrüche und Worttrennungen bereinigt sind; solange es keines gibt, in der Eingabe
 const citations = computed(() => findCitations(output.value || input.value));
@@ -269,9 +312,13 @@ function download() {
               aria-label="Ergebnis mit hervorgehobenen Änderungen"
               data-testid="ergebnis"
               @click="onOutputTokenClick"
+              @mouseover="zeigeHerkunft"
+              @mouseleave="hinweis.zeilen = null"
+              @scroll="hinweis.zeilen = null"
             ><template v-for="(token, i) in tokens" :key="i"><span
               v-if="token.word"
               :data-start="token.start"
+              :data-index="token.index"
               :class="{ 'rounded bg-warning/25': token.changed, 'flash-word': token.start === flashStart }"
             >{{ token.text }}</span><template v-else>{{ token.text }}</template></template></div>
             <LineBreakBackdrop v-if="showBreaks && !(highlight && tokens)" :target="outputEl" :text="output" />
@@ -289,7 +336,7 @@ function download() {
           </div>
           <p v-if="highlight && output && !tokens" class="text-xs opacity-60">Der Text ist zu lang, um Änderungen hervorzuheben.</p>
           <p class="text-xs opacity-60">
-            {{ highlight ? 'Zum Bearbeiten «Änderungen hervorheben» ausschalten.' : 'Eigene Änderungen gehen verloren, wenn sich die Eingabe ändert.' }}
+            {{ highlight ? 'Darüberfahren zeigt, welche Regel ein markiertes Wort verändert hat. Zum Bearbeiten «Änderungen hervorheben» ausschalten.' : 'Eigene Änderungen gehen verloren, wenn sich die Eingabe ändert.' }}
           </p>
         </div>
       </section>
@@ -329,6 +376,21 @@ function download() {
       Regeln und Wortlisten aus «PDF einfügen» ({{ WORDLIST_SOURCE }}). Fundstellen (Bundesgerichtsentscheide und
       Gesetzesartikel) werden immer erkannt, wie mit den Makros «BGerAufruf» und «GesetzAufruf», aber ohne die Stelle zuerst zu markieren.
     </p>
+
+    <Teleport to="body">
+      <div
+        v-if="hinweis.zeilen"
+        class="pointer-events-none fixed z-50 w-max max-w-90 rounded-box border border-base-300 bg-base-100 px-3 py-2 text-xs shadow-lg"
+        :style="{ left: `${hinweis.x}px`, top: `${hinweis.y}px` }"
+        role="tooltip"
+      >
+        <div v-for="(z, i) in hinweis.zeilen" :key="i" class="flex flex-wrap gap-x-1.5" :class="{ 'mt-1 border-t border-base-300 pt-1': i > 0 }">
+          <span class="font-semibold">{{ z.label }}</span>
+          <span class="font-mono">{{ z.regel }}</span>
+          <span v-if="z.eigen" class="badge badge-xs badge-primary">eigener Eintrag</span>
+        </div>
+      </div>
+    </Teleport>
 
     <KonvertierungenDialog ref="dialog" :schritte="schritte" @waehle="id => (konvId = id)" />
   </div>

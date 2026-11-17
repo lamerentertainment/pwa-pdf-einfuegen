@@ -30,7 +30,9 @@ Die App ist Open Source, damit jede und jeder nachprüfen kann, was sie tut.
    [`src/process/wordlists.json`](src/process/wordlists.json)). Die Tests prüfen das Ergebnis Zeichen für
    Zeichen gegen die ursprüngliche Python-Umsetzung; drei Fehler des Originals sind dabei behoben
    (siehe [`scripts/pdf-einfuegen/generate_golden.py`](scripts/pdf-einfuegen/generate_golden.py)).
-   Änderungen werden im Ergebnis hervorgehoben. Die einzelnen Schritte von «Zeilen zusammenfügen»
+   Änderungen werden im Ergebnis hervorgehoben; beim Darüberfahren zeigt ein Hinweis, welche Regel
+   ein Wort verändert hat, bei Wortlisten mit dem Eintrag («Pronomen: ich → er»), auch über mehrere
+   Regeln hinweg ([`src/process/herkunft.js`](src/process/herkunft.js)). Die einzelnen Schritte von «Zeilen zusammenfügen»
    (Zeilenumbrüche, Worttrennungen, Leerzeichen, Anführungszeichen, Frankenbeträge, OCR-Korrekturen)
    lassen sich an- und abwählen. Neben den eingebauten Konvertierungen in die indirekte Rede (Mann/Frau)
    lassen sich eigene anlegen, etwa für Rechtsschriften («ich» → «der Beschuldigte»): Sie speichern nur
