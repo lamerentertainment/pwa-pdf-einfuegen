@@ -30,7 +30,12 @@ Die App ist Open Source, damit jede und jeder nachprüfen kann, was sie tut.
    [`src/process/wordlists.json`](src/process/wordlists.json)). Die Tests prüfen das Ergebnis Zeichen für
    Zeichen gegen die ursprüngliche Python-Umsetzung; zwei Fehler des Originals sind dabei behoben
    (siehe [`scripts/pdf-einfuegen/generate_golden.py`](scripts/pdf-einfuegen/generate_golden.py)).
-   Änderungen werden im Ergebnis hervorgehoben.
+   Änderungen werden im Ergebnis hervorgehoben. Die einzelnen Schritte von «Zeilen zusammenfügen»
+   (Zeilenumbrüche, Worttrennungen, Leerzeichen, Anführungszeichen, Frankenbeträge, OCR-Korrekturen)
+   lassen sich an- und abwählen. Neben den eingebauten Konvertierungen in die indirekte Rede (Mann/Frau)
+   lassen sich eigene anlegen, etwa für Rechtsschriften («ich» → «der Beschuldigte»): Sie speichern nur
+   ihre Abweichungen von einer Grundlage, bleiben im Browser und lassen sich als .json exportieren und
+   importieren ([`src/process/konvertierungen.js`](src/process/konvertierungen.js)).
 3. **Transformieren** – mit einem lokalen Sprachmodell nach einer Vorlage umformen, etwa in die
    indirekte Rede oder als Zusammenfassung. Das Modell läuft im Browser auf der Grafikkarte
    (WebGPU, [transformers.js](https://huggingface.co/docs/transformers.js)), ohne Internet. Zur Wahl

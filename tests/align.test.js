@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { alignWords, mapPosition, paragraphs } from '../src/process/align.js';
-import { processText } from '../src/process/rules.js';
+import { eingebauteListen, processText } from '../src/process/rules.js';
+
+const mann = { listen: eingebauteListen('m') };
 
 const at = (text, needle) => text.indexOf(needle);
 const wordAt = (text, range) => text.slice(range.start, range.end);
@@ -21,7 +23,7 @@ describe('alignWords', () => {
 
 describe('mapPosition', () => {
     const input = 'Ich habe das Fahr-\nzeug am Montag abgeholt.\n\nIch war zu\nHause.';
-    const output = processText(input, 'mann');
+    const output = processText(input, mann);
 
     it('findet ein unverändertes Wort im richtigen Absatz', () => {
         expect(output).toBe('Er habe das Fahrzeug am Montag abgeholt.\n\nEr sei zu Hause gewesen.');
@@ -41,7 +43,7 @@ describe('mapPosition', () => {
     });
 
     it('arbeitet über den ganzen Text, wenn die Absätze nicht übereinstimmen', () => {
-        const joined = processText(input, 'mann', { keepParagraphs: false });
+        const joined = processText(input, mann, { keepParagraphs: false });
         expect(wordAt(joined, mapPosition(input, joined, at(input, 'Hause')))).toBe('Hause');
     });
 

@@ -34,6 +34,12 @@ function capitalize(word) {
     return word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : word;
 }
 
+// Ersatz am Satzanfang: nur der erste Buchstabe gross, damit "der Beschuldigte" nicht zu
+// "Der beschuldigte" wird (für die eingebauten Wortlisten gleich wie capitalize())
+function upperFirst(text) {
+    return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+}
+
 function escapeRegExp(text) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -56,12 +62,12 @@ export function ersetzeWort(text, word, replacement, { ocr = false } = {}) {
         text = replaceAll(text, ` ${word}${after}`, ` ${replacement}${after}`);
     }
     if (!ocr) {
-        return replaceAll(text, `${capitalize(word)} `, `${capitalize(replacement)} `);
+        return replaceAll(text, `${capitalize(word)} `, `${upperFirst(replacement)} `);
     }
     // OCR: grossgeschriebene Wörter werden oft falsch erkannt, darum ohne capitalize() und
     // zusätzlich in der Originalschreibweise – aber nur am Wortanfang (Korrektur 1)
     text = replaceAtWordStart(text, `${word} `, `${replacement} `);
-    return replaceAtWordStart(text, `${capitalize(word)} `, `${capitalize(replacement)} `);
+    return replaceAtWordStart(text, `${capitalize(word)} `, `${upperFirst(replacement)} `);
 }
 
 function pastTensePattern(verb) {
@@ -117,88 +123,143 @@ export function ersetzeVergangenheitsform(text, verb, replacement, auxiliary) {
     return text;
 }
 
+/**
+ * Die einzelnen Schritte der Bereinigung, in der Reihenfolge, in der sie laufen. Man kann sie an-
+ * und abwählen, aber nicht umstellen: Mit allen Schritten ergibt sich genau das Ergebnis des
+ * Originals («Text aus PDF einfügen»).
+ */
+export const SCHRITTE = Object.freeze([
+    { id: 'umbrueche', label: 'Zeilenumbrüche entfernen', beispiel: 'Zeile↵Zeile → Zeile Zeile' },
+    { id: 'trennung', label: 'Worttrennungen auflösen', beispiel: '«Jung- geselle» → «Junggeselle»', hinweis: 'Ausschalten, wenn der Text Ergänzungsstriche enthält («Kantons- und Bundesrecht»)' },
+    { id: 'leerzeichen', label: 'Mehrfache Leerzeichen kürzen', beispiel: '«a␣␣b» → «a␣b»' },
+    { id: 'anfuehrungszeichen', label: 'Anführungszeichen vereinheitlichen', beispiel: '«» → "' },
+    { id: 'franken', label: 'Frankenbeträge vereinheitlichen', beispiel: '«CHF 50.00» → «Fr. 50.--»' },
+    { id: 'ocrZeichen', label: 'OCR: Zeichenfolgen korrigieren', beispiel: '«,,» → ", «o/o» → %, «nrv» → «rw»' },
+    { id: 'ocrWoerter', label: 'OCR: Wörter korrigieren', beispiel: '«lch» → «Ich», «lhnen» → «Ihnen»' },
+]);
+
+/** Alle Schritte eingeschaltet (Standard). */
+export const ALLE_SCHRITTE = Object.freeze(Object.fromEntries(SCHRITTE.map(s => [s.id, true])));
+
 /** Zeilenumbrüche, Worttrennungen und typische Formatierungen aus kopiertem PDF-Text bereinigen. */
-export function zeilenumbruecheEntfernen(text) {
+export function zeilenumbruecheEntfernen(text, schritte = ALLE_SCHRITTE) {
     // Windows-Zeilenenden vereinheitlichen (Textfelder liefern ohnehin \n)
     text = text.replace(/\r\n?/g, '\n');
-    // Leerzeichen am Zeilenende löschen
-    text = text.replace(/\s+$/gmu, '');
-    // Am Zeilenende (ausser nach Bindestrich) ein Leerzeichen setzen
-    text = text.replace(/([^-])$/gmu, '$1 ');
-    // Bindestrich am Zeilenende löschen
-    text = text.replace(/-$/gmu, '');
-    text = replaceAll(text, '\n', '');
-    text = replaceAll(text, '\r', '');
-    // doppelte und dreifache Leerzeichen
-    text = replaceAll(text, '  ', ' ');
-    text = replaceAll(text, '   ', ' ');
-    // «» → "
-    text = replaceAll(text, '«', '"');
-    text = replaceAll(text, '»', '"');
-    // Frankenformatierung
-    text = replaceAll(text, ' CHF ', ' Fr. ');
-    text = replaceAll(text, ' SFR ', ' Fr. ');
-    text = replaceAll(text, '.00 ', '.-- ');
-    // Platzhalter für unbekannte Zeichen
+    if (schritte.umbrueche) {
+        // Leerzeichen am Zeilenende löschen
+        text = text.replace(/\s+$/gmu, '');
+        if (schritte.trennung) {
+            // Am Zeilenende (ausser nach Bindestrich) ein Leerzeichen setzen
+            text = text.replace(/([^-])$/gmu, '$1 ');
+            // Bindestrich am Zeilenende löschen
+            text = text.replace(/-$/gmu, '');
+        } else {
+            // Bindestrich bleibt stehen («Kantons- und Bundesrecht»)
+            text = text.replace(/(.)$/gmu, '$1 ');
+        }
+        text = replaceAll(text, '\n', '');
+        text = replaceAll(text, '\r', '');
+    }
+    if (schritte.leerzeichen) {
+        // doppelte und dreifache Leerzeichen
+        text = replaceAll(text, '  ', ' ');
+        text = replaceAll(text, '   ', ' ');
+    }
+    if (schritte.anfuehrungszeichen) {
+        // «» → "
+        text = replaceAll(text, '«', '"');
+        text = replaceAll(text, '»', '"');
+    }
+    if (schritte.franken) {
+        text = replaceAll(text, ' CHF ', ' Fr. ');
+        text = replaceAll(text, ' SFR ', ' Fr. ');
+        text = replaceAll(text, '.00 ', '.-- ');
+    }
+    // Platzhalter für unbekannte Zeichen (immer)
     text = replaceAll(text, '\u0000', '');
-    // getrennte Wörter: "Jung- geselle" → "Junggeselle"
-    return text.replace(new RegExp(`(${WORD})-\\s(${WORD})`, 'gu'), '$1$2');
+    if (schritte.trennung) {
+        // getrennte Wörter: "Jung- geselle" → "Junggeselle"
+        text = text.replace(new RegExp(`(${WORD})-\\s(${WORD})`, 'gu'), '$1$2');
+    }
+    return text;
 }
 
 /** Typische Fehler der Texterkennung ("lch" statt "Ich", ",," statt Anführungszeichen). */
-export function ocrErsetzung(text) {
-    text = replaceAll(text, ',,', '"');
-    text = replaceAll(text, 'o/o', '%');
-    text = replaceAll(text, 'nrv', 'rw');
-    text = replaceAll(text, 'nry', 'rw');
-    for (const [word, replacement] of lists.ocr) {
-        text = ersetzeWort(text, word, replacement, { ocr: true });
+export function ocrErsetzung(text, schritte = ALLE_SCHRITTE) {
+    if (schritte.ocrZeichen) {
+        text = replaceAll(text, ',,', '"');
+        text = replaceAll(text, 'o/o', '%');
+        text = replaceAll(text, 'nrv', 'rw');
+        text = replaceAll(text, 'nry', 'rw');
+    }
+    if (schritte.ocrWoerter) {
+        for (const [word, replacement] of lists.ocr) {
+            text = ersetzeWort(text, word, replacement, { ocr: true });
+        }
     }
     return text;
+}
+
+/** Die eingebauten Wortlisten einer Konvertierung (indirekte Rede, Mann oder Frau). */
+export function eingebauteListen(geschlecht = 'm') {
+    return {
+        pronomen: geschlecht === 'm' ? lists.pronomenMann : lists.pronomenFrau,
+        praesens: lists.praesens,
+        praeteritum: lists.praeteritum,
+        zusammenfuegung: lists.zusammenfuegung,
+    };
 }
 
 export function pronomenErsetzung(text, geschlecht = 'm') {
-    for (const [word, replacement] of geschlecht === 'm' ? lists.pronomenMann : lists.pronomenFrau) {
+    return ersetzePronomen(text, eingebauteListen(geschlecht).pronomen);
+}
+
+function ersetzePronomen(text, pronomen) {
+    for (const [word, replacement] of pronomen) {
         text = ersetzeWort(text, word, replacement);
     }
     return text;
 }
 
-export function verbenErsetzung(text) {
-    for (const [verb, replacement, auxiliary] of lists.praeteritum) {
-        text = ersetzeVergangenheitsform(text, verb, replacement, auxiliary);
+export function verbenErsetzung(text, listen = eingebauteListen()) {
+    for (const [verb, replacement, auxiliary] of listen.praeteritum) {
+        text = ersetzeVergangenheitsform(text, escapeRegExp(verb), replacement, auxiliary);
     }
-    for (const [word, replacement] of lists.praesens) {
+    for (const [word, replacement] of listen.praesens) {
         text = ersetzeWort(text, word, replacement);
     }
-    for (const [word, replacement] of lists.zusammenfuegung) {
+    for (const [word, replacement] of listen.zusammenfuegung) {
         text = ersetzeWort(text, word, replacement);
     }
     return text;
+}
+
+/**
+ * Bereinigung (gewählte Schritte) und, falls `listen` angegeben, Konvertierung: Pronomen, dann
+ * Verben im Präteritum und Präsens, dann Zusammenschreibung – wie im Original.
+ */
+export function verarbeite(text, { schritte = ALLE_SCHRITTE, listen = null } = {}) {
+    text = ocrErsetzung(zeilenumbruecheEntfernen(text, schritte), schritte);
+    if (!listen) return text;
+    return verbenErsetzung(ersetzePronomen(text, listen.pronomen), listen);
 }
 
 /** «Text aus PDF einfügen»: Zeilen zusammenfügen und OCR-Fehler korrigieren. */
 export function vonPdfEinfuegen(text) {
-    return ocrErsetzung(zeilenumbruecheEntfernen(text));
+    return verarbeite(text);
 }
 
 /** «Als Aussage einfügen»: zusätzlich dritte Person und Konjunktiv (indirekte Rede). */
 export function alsAussageFormatieren(text, geschlecht = 'm') {
-    return verbenErsetzung(pronomenErsetzung(ocrErsetzung(zeilenumbruecheEntfernen(text)), geschlecht));
+    return verarbeite(text, { listen: eingebauteListen(geschlecht) });
 }
 
-export const MODES = Object.freeze({
-    einfuegen: { label: 'Zeilen zusammenfügen', run: vonPdfEinfuegen },
-    mann: { label: 'Als Aussage (Mann)', run: text => alsAussageFormatieren(text, 'm') },
-    frau: { label: 'Als Aussage (Frau)', run: text => alsAussageFormatieren(text, 'w') },
-});
-
 /**
- * Wendet einen Modus Absatz für Absatz an. Das Original verbindet alle Zeilen zu einem
- * einzigen Absatz; bei längeren Texten aus Stufe 1 bleiben so die Absätze erhalten.
+ * Wendet Bereinigung und Konvertierung Absatz für Absatz an. Das Original verbindet alle Zeilen
+ * zu einem einzigen Absatz; bei längeren Texten aus Stufe 1 bleiben so die Absätze erhalten.
  */
-export function processText(text, mode, { keepParagraphs = true } = {}) {
-    const run = MODES[mode].run;
+export function processText(text, options = {}, { keepParagraphs = true } = {}) {
+    const run = paragraph => verarbeite(paragraph, options);
     if (!keepParagraphs) return run(text).trim();
     return text
         .replace(/\r\n?/g, '\n')

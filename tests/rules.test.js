@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import golden from './fixtures/pdf-einfuegen-golden.json';
 import {
-    alsAussageFormatieren, ersetzeWort, processText, vonPdfEinfuegen, zeilenumbruecheEntfernen,
+    ALLE_SCHRITTE, alsAussageFormatieren, eingebauteListen, ersetzeWort, processText, verarbeite, vonPdfEinfuegen,
+    zeilenumbruecheEntfernen,
 } from '../src/process/rules.js';
+
+const ohne = (...ids) => ({ ...ALLE_SCHRITTE, ...Object.fromEntries(ids.map(id => [id, false])) });
 
 const run = {
     einfuegen: vonPdfEinfuegen,
@@ -43,10 +46,35 @@ describe('Eigenheiten wie in Python', () => {
 
 describe('processText', () => {
     it('behält Absätze und entfernt das abschliessende Leerzeichen', () => {
-        expect(processText('Ich bin\nunschuldig.\n\nIch war zu\nHause.', 'mann')).toBe('Er sei unschuldig.\n\nEr sei zu Hause gewesen.');
+        expect(processText('Ich bin\nunschuldig.\n\nIch war zu\nHause.', { listen: eingebauteListen('m') })).toBe('Er sei unschuldig.\n\nEr sei zu Hause gewesen.');
     });
 
     it('fügt auf Wunsch alles zu einem Absatz zusammen', () => {
-        expect(processText('Erste Zeile\n\nzweite Zeile', 'einfuegen', { keepParagraphs: false })).toBe('Erste Zeile zweite Zeile');
+        expect(processText('Erste Zeile\n\nzweite Zeile', {}, { keepParagraphs: false })).toBe('Erste Zeile zweite Zeile');
+    });
+});
+
+describe('Schritte der Bereinigung einzeln abwählen', () => {
+    it('behält Zeilenumbrüche', () => {
+        expect(verarbeite('Erste\nZeile', { schritte: ohne('umbrueche') })).toBe('Erste\nZeile');
+    });
+
+    it('behält Ergänzungsstriche ohne Auflösen der Worttrennung', () => {
+        expect(verarbeite('Kantons-\nund Bundesrecht', { schritte: ohne('trennung') })).toBe('Kantons- und Bundesrecht ');
+        expect(verarbeite('Kantons-\nund Bundesrecht')).toBe('Kantonsund Bundesrecht ');
+    });
+
+    it('löst Worttrennungen auch ohne Zusammenfügen der Zeilen auf', () => {
+        expect(verarbeite('Jung-\ngeselle', { schritte: ohne('umbrueche') })).toBe('Junggeselle');
+    });
+
+    it('lässt Anführungszeichen, Beträge und OCR-Fehler stehen', () => {
+        const schritte = ohne('anfuehrungszeichen', 'franken', 'ocrZeichen', 'ocrWoerter');
+        expect(verarbeite('lch zahle CHF 50.00 «sofort» ,,ja"', { schritte })).toBe('lch zahle CHF 50.00 «sofort» ,,ja" ');
+    });
+
+    it('wendet eigene Wortlisten an', () => {
+        const listen = { ...eingebauteListen('m'), pronomen: [['ich', 'der Beschuldigte'], ['mir', 'dem Beschuldigten']] };
+        expect(processText('Ich habe mir das gekauft.', { listen })).toBe('Der Beschuldigte habe dem Beschuldigten das gekauft.');
     });
 });

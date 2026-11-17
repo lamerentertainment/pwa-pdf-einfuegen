@@ -1,9 +1,11 @@
 <script setup>
 import { computed, nextTick, reactive, ref, toRef, watch } from 'vue';
-import { ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, ClipboardDocumentIcon, DocumentArrowDownIcon } from '@heroicons/vue/24/outline';
+import { ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, ClipboardDocumentIcon, Cog6ToothIcon, DocumentArrowDownIcon } from '@heroicons/vue/24/outline';
 import { documentState } from '../capture/documentStore.js';
 import { joinPages } from '../capture/joinPages.js';
-import { MODES, processText, WORDLIST_SOURCE } from '../process/rules.js';
+import { ALLE_SCHRITTE, processText, SCHRITTE, WORDLIST_SOURCE } from '../process/rules.js';
+import { findeKonvertierung, istAusgeblendet, konvertierungen, listenFuer, sichtbareKonvertierungen } from '../process/konvertierungen.js';
+import KonvertierungenDialog from '../components/KonvertierungenDialog.vue';
 import { diffParagraphs } from '../process/diff.js';
 import { mapPosition } from '../process/align.js';
 import { findCitations } from '../process/citations.js';
@@ -15,7 +17,21 @@ import { elementVisibleTop, scrollElementTo, scrollTextareaTo, textareaVisibleTo
 // Gemeinsam mit Stufe 3 (processStore), damit diese das Ergebnis übernehmen kann
 const input = toRef(processState, 'input');
 const output = toRef(processState, 'output');
-const mode = ref('einfuegen');
+// Gewählte Konvertierung ('' = keine) und Schritte der Bereinigung (gleich für alle Konvertierungen),
+// beides merkt sich der Browser
+const konvId = usePreference('verarbeiten.konvertierung', '');
+const gespeicherteSchritte = usePreference('verarbeiten.schritte', { ...ALLE_SCHRITTE });
+const schritte = computed(() => ({ ...ALLE_SCHRITTE, ...gespeicherteSchritte.value }));
+const aktiveSchritte = computed(() => SCHRITTE.filter(s => schritte.value[s.id]).length);
+const standardSchritte = computed(() => SCHRITTE.every(s => schritte.value[s.id]));
+function setzeSchritt(id, an) {
+    gespeicherteSchritte.value = { ...schritte.value, [id]: an };
+}
+const auswahl = computed(() => sichtbareKonvertierungen());
+const konv = computed(() => (konvId.value && !istAusgeblendet(konvId.value) ? findeKonvertierung(konvId.value) : null));
+// Gelöscht oder ausgeblendet: zurück zu «Keine Konvertierung»
+watch(konv, k => { if (!k && konvId.value) konvId.value = ''; }, { immediate: true });
+const dialog = ref(null);
 const keepParagraphs = ref(true);
 const highlight = ref(true);
 const copied = ref(false);
@@ -26,15 +42,15 @@ const hasDocument = computed(() => documentState.pages.length > 0);
 // Neu berechnen, wenn sich Eingabe oder Einstellungen ändern (verzögert, damit lange Texte
 // beim Tippen nicht bremsen). Eigene Änderungen am Ergebnis gehen dabei verloren.
 let timer;
-watch([input, mode, keepParagraphs], () => {
+watch([input, konv, schritte, keepParagraphs, () => konvertierungen.eigene], () => {
     clearTimeout(timer);
     timer = setTimeout(run, 250);
-});
+}, { deep: true }); // deep: auch Änderungen an eigenen Konvertierungen (Fenster «verwalten»)
 
 function run() {
     error.value = null;
     try {
-        output.value = input.value.trim() ? processText(input.value, mode.value, { keepParagraphs: keepParagraphs.value }) : '';
+        output.value = input.value.trim() ? processText(input.value, { schritte: schritte.value, listen: konv.value ? listenFuer(konv.value) : null }, { keepParagraphs: keepParagraphs.value }) : '';
     } catch (err) {
         error.value = err.message;
         console.error(err);
@@ -134,7 +150,8 @@ async function copy() {
 
 function download() {
     const url = URL.createObjectURL(new Blob([output.value], { type: 'text/plain;charset=utf-8' }));
-    const name = `${(documentState.fileName || 'text').replace(/\.pdf$/i, '')}-${mode.value}.txt`;
+    const suffix = konv.value ? konv.value.name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') : 'bereinigt';
+    const name = `${(documentState.fileName || 'text').replace(/\.pdf$/i, '')}-${suffix}.txt`;
     Object.assign(document.createElement('a'), { href: url, download: name }).click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -146,45 +163,45 @@ function download() {
       <div class="card-body gap-3 py-4">
         <div class="flex flex-wrap items-center gap-3">
           <h2 class="card-title">2 · Text mit hartkodierten Algorithmen transformieren (KRG-Makros)</h2>
-          <div class="join ml-auto" role="radiogroup" aria-label="Umwandlung">
-            <button
-              v-for="(m, key) in MODES"
-              :key="key"
-              class="btn btn-sm join-item"
-              :class="{ 'btn-primary': mode === key }"
-              role="radio"
-              :aria-checked="mode === key"
-              @click="mode = key"
-            >
-              {{ m.label }}
+          <div class="ml-auto flex items-center gap-1">
+            <select v-model="konvId" class="select select-sm w-auto max-w-full" aria-label="Konvertierung">
+              <option value="">Keine Konvertierung (nur Zeilen zusammenfügen)</option>
+              <option v-for="k in auswahl" :key="k.id" :value="k.id">{{ k.name }}</option>
+            </select>
+            <button class="btn btn-sm btn-ghost btn-square" title="Konvertierungen verwalten: eigene erstellen, bearbeiten, importieren" aria-label="Konvertierungen verwalten" @click="dialog.open(konv?.id)">
+              <Cog6ToothIcon class="size-5" />
             </button>
           </div>
         </div>
         <p class="text-sm opacity-80">
           Feste Regeln und Wortlisten, übernommen aus den KRG-Makros. Kein Modell, kein Internet: Derselbe Text
           ergibt immer dasselbe Ergebnis, und jede Änderung lässt sich hervorheben und nachprüfen.
+          <template v-if="konv">
+            Die Konvertierung wandelt in die indirekte Rede um, also erste in dritte Person und Verben in den Konjunktiv
+            («Ich ging nach Hause» → «{{ konv.grundlage === 'frau' ? 'Sie' : 'Er' }} sei nach Hause gegangen»). Sie beruht
+            auf festen Wortlisten: Das Ergebnis immer prüfen und meist überarbeiten.
+          </template>
         </p>
-        <ul class="list-disc space-y-1 pl-5 text-sm opacity-80">
-          <li>
-            <strong>Zeilen zusammenfügen</strong> (immer): Zeilenumbrüche aus dem PDF entfernen und Worttrennungen am
-            Zeilenende auflösen («Jung- geselle» → «Junggeselle»), doppelte Leerzeichen kürzen, «» durch "
-            ersetzen, Frankenbeträge vereinheitlichen («CHF 50.00» → «Fr. 50.--») und typische Fehler der
-            Texterkennung korrigieren («lch» → «Ich», «,,» → ").
-          </li>
-          <li :class="{ 'opacity-60': mode === 'einfuegen' }">
-            <strong>Als Aussage (Mann/Frau)</strong> (zusätzlich): in die indirekte Rede umwandeln, also erste in dritte
-            Person und Verben in den Konjunktiv, auch im Präteritum («Ich bin unschuldig» →
-            «{{ mode === 'frau' ? 'Sie' : 'Er' }} sei unschuldig», «Ich ging nach Hause» → «{{ mode === 'frau' ? 'Sie' : 'Er' }} sei nach Hause gegangen»).
-            Das basiert auf fest einprogrammierten Worttransformationen: Das Ergebnis immer prüfen und meist überarbeiten.
-          </li>
-          <li>
-            <strong>Fundstellen erkennen</strong> (immer, neu): Bundesgerichtsentscheide (Geschäftsnummern wie
-            6B_123/2020 und BGE 145 IV 1) und Gesetzesartikel (Art. 47 StGB, Art. 12a Abs. 2 BetmG) werden
-            im Ergebnis gefunden und unten als Links angeboten: Entscheide auf bger.li, Artikel auf Fedlex. Das
-            ersetzt die Makros «BGerAufruf» und «GesetzAufruf», ohne dass man die Stelle zuerst markieren muss.
-            Abgerufen wird nichts; erst ein Klick öffnet einen neuen Tab.
-          </li>
-        </ul>
+        <details class="group text-sm">
+          <summary class="cursor-pointer select-none opacity-80">
+            <strong>Zeilen zusammenfügen</strong> ·
+            {{ standardSchritte ? `alle ${SCHRITTE.length} Schritte` : `${aktiveSchritte} von ${SCHRITTE.length} Schritten` }}
+          </summary>
+          <div class="mt-2 grid gap-x-6 gap-y-1.5 pl-4 sm:grid-cols-2">
+            <label v-for="s in SCHRITTE" :key="s.id" class="flex items-start gap-2" :title="s.hinweis">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm mt-0.5"
+                :checked="schritte[s.id]"
+                @change="setzeSchritt(s.id, $event.target.checked)"
+              />
+              <span>{{ s.label }} <span class="block text-xs opacity-60">{{ s.beispiel }}<template v-if="s.hinweis"> · {{ s.hinweis }}</template></span></span>
+            </label>
+          </div>
+          <button v-if="!standardSchritte" class="btn btn-link btn-xs mt-1 pl-4" @click="gespeicherteSchritte = { ...ALLE_SCHRITTE }">
+            Alle Schritte einschalten
+          </button>
+        </details>
         <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
           <label class="flex items-center gap-2">
             <input v-model="keepParagraphs" type="checkbox" class="checkbox checkbox-sm" /> Absätze erhalten
@@ -216,7 +233,7 @@ function download() {
               v-model="input"
               class="textarea relative h-[65vh] min-h-48 w-full resize-y font-mono text-sm leading-6 [scrollbar-gutter:stable]"
               :class="{ 'bg-transparent': showBreaks }"
-              placeholder="Text hier einfügen, z. B. eine Passage aus einem PDF oder einer Einvernahme …"
+              placeholder="Text hier einfügen, z.B. eine aus einer PDF kopierte oder (nach Schritt 1) extrahierte Passage ..."
               spellcheck="false"
               aria-label="Eingabe"
               @click="alignFromInput"
@@ -309,8 +326,11 @@ function download() {
       Tipp: Ein Klick auf eine Stelle in einem Feld setzt die entsprechende Stelle im anderen Feld auf dieselbe Höhe.
     </p>
     <p class="text-xs opacity-60">
-      Regeln und Wortlisten aus «PDF einfügen» ({{ WORDLIST_SOURCE }}), Fundstellen nach den Makros «BGerAufruf» und «GesetzAufruf».
+      Regeln und Wortlisten aus «PDF einfügen» ({{ WORDLIST_SOURCE }}). Fundstellen (Bundesgerichtsentscheide und
+      Gesetzesartikel) werden immer erkannt, wie mit den Makros «BGerAufruf» und «GesetzAufruf», aber ohne die Stelle zuerst zu markieren.
     </p>
+
+    <KonvertierungenDialog ref="dialog" :schritte="schritte" @waehle="id => (konvId = id)" />
   </div>
 </template>
 
