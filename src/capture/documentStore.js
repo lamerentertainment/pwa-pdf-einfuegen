@@ -18,11 +18,13 @@ export const documentState = reactive({
     controller: null,
     // Laufende Neuerfassung einer Seite: { page, status } oder null
     recapture: null,
+    // Erster Beleg der Seitenmarker, vom Benutzer bestätigt (actPagination.js); null: noch offen
+    pageStart: null,
 });
 
 export async function closeDocument() {
     const pdf = documentState.pdf;
-    Object.assign(documentState, { fileName: null, pdf: null, pages: [], notices: [], layoutGroups: [], error: null });
+    Object.assign(documentState, { fileName: null, pdf: null, pages: [], notices: [], layoutGroups: [], error: null, pageStart: null });
     await pdf?.loadingTask.destroy();
 }
 

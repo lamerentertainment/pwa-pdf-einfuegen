@@ -107,6 +107,8 @@ describe('joinPages', () => {
         const indented = [{ number: 1, text: 'Eins' }, { number: 2, text: '\n    eingerückt\n' }];
         expect(joinPages(indented)).toBe('Eins\n\n    eingerückt');
         expect(joinPages(indented, { pageMarkers: true })).toBe('--- Seite 1 ---\n\nEins\n\n--- Seite 2 ---\n\n    eingerückt');
+        expect(joinPages(indented, { pageMarkers: true, pageName: n => `pag. 10.1.${n + 4}` }))
+            .toBe('--- pag. 10.1.5 ---\n\nEins\n\n--- pag. 10.1.6 ---\n\n    eingerückt');
     });
 });
 

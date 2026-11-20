@@ -1,9 +1,10 @@
 <script setup>
-import { computed, onActivated, onMounted, ref, watchEffect } from 'vue';
+import { computed, nextTick, onActivated, onMounted, ref, watch, watchEffect } from 'vue';
 import { ArrowUpTrayIcon, ChevronDownIcon, ClipboardDocumentIcon, ArrowDownTrayIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import ReviewPane from '../components/ReviewPane.vue';
 import { cancel, closeDocument, documentState, openFile } from '../capture/documentStore.js';
 import { joinPages } from '../capture/joinPages.js';
+import { planPagination } from '../capture/actPagination.js';
 import ocrService from '../ocr/ocrService.js';
 import { EXAMPLES, exampleUrl, loadExample } from '../capture/examples.js';
 import { formatBytes, models, modelSize } from '../models/modelStore.js';
@@ -63,7 +64,85 @@ onMounted(refreshModels);
 onActivated(refreshModels);
 
 const hasDocument = computed(() => documentState.pages.length > 0);
-const fullText = computed(() => joinPages(documentState.pages, { pageMarkers: pageMarkers.value }));
+// Seitenmarker mit Aktenpaginierung, wenn der Dateiname einer Konvention folgt (actPagination.js).
+// Bewusst ohne Hinweis in der Oberfläche, solange keine Konvention erkannt wird.
+const paginationPlan = computed(() => documentState.fileName
+    ? planPagination(documentState.fileName, documentState.pages.length) : null);
+const pageStart = computed(() => documentState.pageStart ?? paginationPlan.value?.start);
+const pageName = computed(() => {
+    const plan = paginationPlan.value;
+    return plan ? n => plan.pagination.name(pageStart.value + n - 1) : undefined;
+});
+const fullText = computed(() => joinPages(documentState.pages, { pageMarkers: pageMarkers.value, pageName: pageName.value }));
+
+// Erklärt, woher der erste Beleg kommt
+const paginationInfo = computed(() => {
+    const plan = paginationPlan.value;
+    if (!plan) return '';
+    const { pagination: { name, first }, excerpt } = plan;
+    const start = name(pageStart.value);
+    if (documentState.pageStart !== null && documentState.pageStart !== plan.start) {
+        return `Seitenmarker ab ${start} (von Hand gesetzt).`;
+    }
+    if (excerpt) {
+        return `Ausschnitt aus «${excerpt.source}», das bei ${name(first)} beginnt. Die erste Seite des Ausschnitts ist dort `
+            + `Seite ${excerpt.from}, also ${excerpt.from - 1} Belege weiter: Seitenmarker ab ${start}.`;
+    }
+    return `Seitenmarker ab ${start}, nach dem Dateinamen.`;
+});
+
+// Fragt den ersten Beleg, wenn der Dateiname ihn nicht bestimmt – erst, wenn Seitenmarker an sind
+const startDialog = ref(null);
+const startInput = ref(null);
+const startValue = ref('');
+const startValid = computed(() => /^\d+$/.test(String(startValue.value).trim()));
+const startPreview = computed(() => {
+    const plan = paginationPlan.value;
+    if (!plan || !startValid.value) return '';
+    const start = Number(startValue.value);
+    return `${plan.pagination.name(start)} bis ${plan.pagination.name(start + documentState.pages.length - 1)}`;
+});
+const startQuestion = computed(() => {
+    const plan = paginationPlan.value;
+    if (!plan?.ask) return '';
+    const { pagination: { name, first, last, scope }, excerpt, ask } = plan;
+    const file = `«${documentState.fileName}»`;
+    const count = documentState.pages.length;
+    const pages = excerpt && (excerpt.from === excerpt.to ? excerpt.from : `${excerpt.from}–${excerpt.to}`);
+    switch (ask) {
+        case 'mismatch':
+            return `Der Dateiname ${file} nennt ${last - first + 1} Belege (${name(first)} bis ${name(last)}), das PDF hat aber ${count} Seiten.`;
+        case 'open':
+            return `Der Dateiname ${file} nennt nur den Anfang (${name(first)} ff.).`;
+        case 'register':
+            return `Der Dateiname ${file} nennt nur das Register (${scope}).`;
+        case 'excerptRegister':
+            return `${file} enthält Seite ${pages} aus «${excerpt.source}», das nur das Register nennt (${scope}). `
+                + 'Beginnt das Register mit Beleg 1, ist der Vorschlag richtig.';
+        default:
+            return `${file} enthält Seite ${pages} aus «${excerpt.source}», das passt aber nicht zu den ${count} Seiten `
+                + 'des PDFs bzw. zu den Belegen im Dateinamen.';
+    }
+});
+
+async function askPageStart() {
+    startValue.value = String(pageStart.value);
+    startDialog.value.showModal();
+    await nextTick();
+    startInput.value?.select();
+}
+function confirmPageStart() {
+    if (!startValid.value) return;
+    documentState.pageStart = Number(startValue.value);
+    startDialog.value.close();
+}
+function keepPageStart() {
+    documentState.pageStart = paginationPlan.value.start;
+    startDialog.value.close();
+}
+watch([pageMarkers, paginationPlan], ([markers, plan]) => {
+    if (markers && plan?.ask && documentState.pageStart === null) askPageStart();
+});
 const stats = computed(() => {
     const pages = documentState.pages;
     return {
@@ -392,6 +471,10 @@ function noticeText(notice) {
               <button class="btn btn-sm btn-ghost" @click="closeDocument"><XMarkIcon class="size-4" /> Schliessen</button>
             </div>
           </div>
+          <p v-if="pageMarkers && paginationPlan" class="text-sm opacity-70">
+            {{ paginationInfo }}
+            <button class="link" @click="askPageStart">Ersten Beleg ändern</button>
+          </p>
           <div v-for="(notice, i) in documentState.notices" :key="i" role="alert" class="alert alert-warning alert-soft py-2 text-sm">
             <span>{{ noticeText(notice) }}</span>
             <button v-if="notice.type === 'model-missing'" class="btn btn-xs" @click="emit('navigate', 'modelle')">Modell installieren</button>
@@ -400,5 +483,22 @@ function noticeText(notice) {
       </section>
       <ReviewPane :key="documentState.fileName" />
     </template>
+
+    <!-- Erster Beleg der Seitenmarker, wenn der Dateiname ihn nicht bestimmt -->
+    <dialog ref="startDialog" class="modal" @cancel.prevent="keepPageStart">
+      <form class="modal-box max-w-md" @submit.prevent="confirmPageStart">
+        <h3 class="mb-2 text-lg font-bold">Ab welchem Beleg?</h3>
+        <p v-if="startQuestion" class="mb-4 text-sm">{{ startQuestion }} Mit welchem Beleg beginnt das PDF?</p>
+        <label class="flex flex-col gap-1">
+          <span class="text-sm">Erster Beleg im PDF</span>
+          <input ref="startInput" v-model="startValue" type="number" min="0" step="1" required class="input w-full" />
+        </label>
+        <p v-if="startPreview" class="mt-2 text-xs opacity-70">Seitenmarker: {{ startPreview }}</p>
+        <div class="modal-action">
+          <button type="button" class="btn btn-outline" @click="keepPageStart">Wie im Dateinamen</button>
+          <button type="submit" class="btn btn-primary" :disabled="!startValid">Übernehmen</button>
+        </div>
+      </form>
+    </dialog>
   </div>
 </template>

@@ -4,8 +4,12 @@
  */
 export const trimPage = text => text.replace(/^\s*\n/, '').trimEnd();
 
-/** Gesamttext aus den (eventuell bearbeiteten) Seitentexten. */
-export function joinPages(pages, { pageMarkers = false } = {}) {
-    if (pageMarkers) return pages.map(p => `--- Seite ${p.number} ---\n\n${trimPage(p.text)}`.trimEnd()).join('\n\n');
+/**
+ * Gesamttext aus den (eventuell bearbeiteten) Seitentexten. `pageName` beschriftet die
+ * Seitenmarker anhand der PDF-Seitennummer (z. B. Aktenpaginierung, actPagination.js),
+ * sonst «Seite N».
+ */
+export function joinPages(pages, { pageMarkers = false, pageName = n => `Seite ${n}` } = {}) {
+    if (pageMarkers) return pages.map(p => `--- ${pageName(p.number)} ---\n\n${trimPage(p.text)}`.trimEnd()).join('\n\n');
     return pages.map(p => trimPage(p.text)).filter(Boolean).join('\n\n');
 }
