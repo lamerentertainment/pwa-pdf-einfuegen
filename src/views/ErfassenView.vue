@@ -74,6 +74,8 @@ const pageName = computed(() => {
     return plan ? n => plan.pagination.name(pageStart.value + n - 1) : undefined;
 });
 const fullText = computed(() => joinPages(documentState.pages, { pageMarkers: pageMarkers.value, pageName: pageName.value }));
+// Seitenmarker über der Seitenvorschau, zum Prüfen (nur wenn Seitenmarker an sind)
+const markerName = computed(() => (pageMarkers.value ? pageName.value ?? (n => `Seite ${n}`) : null));
 
 // Erklärt, woher der erste Beleg kommt
 const paginationInfo = computed(() => {
@@ -481,7 +483,7 @@ function noticeText(notice) {
           </div>
         </div>
       </section>
-      <ReviewPane :key="documentState.fileName" />
+      <ReviewPane :key="documentState.fileName" :marker-name="markerName" />
     </template>
 
     <!-- Erster Beleg der Seitenmarker, wenn der Dateiname ihn nicht bestimmt -->

@@ -25,6 +25,11 @@ const SOURCE_LABEL = {
     'text-ocr-fehlt': { text: 'Scan – nur verborgene Textebene des Scanners', cls: 'badge-warning' },
 };
 
+const props = defineProps({
+    // Beschriftung des Seitenmarkers aus der PDF-Seitennummer; null: Seitenmarker aus
+    markerName: { type: Function, default: null },
+});
+
 const index = ref(0);
 const showBoxes = ref(true);
 const showRegions = ref(true);
@@ -99,6 +104,7 @@ onMounted(() => layout.fitToWindow(splitBox.value));
 
 const pages = computed(() => documentState.pages);
 const page = computed(() => pages.value[index.value]);
+const marker = computed(() => props.markerName?.(page.value.number) ?? '');
 const source = computed(() => SOURCE_LABEL[page.value.source] ?? { text: page.value.source, cls: 'badge-ghost' });
 const edited = computed(() => page.value.text !== page.value.originalText);
 const uncertain = computed(() => page.value.boxes
@@ -468,6 +474,11 @@ function reset() {
         :class="wide ? 'min-w-0' : 'h-[70vh]'"
         :style="wide ? { width: `${layout.split.value * 100}%` } : null"
       >
+        <div
+          v-if="marker"
+          class="mb-2 rounded bg-base-100 px-3 py-1 text-center font-mono text-sm shadow-sm"
+          data-testid="page-marker"
+        >--- {{ marker }} ---</div>
         <PageView
           :pdf="documentState.pdf"
           :page="page"
