@@ -83,7 +83,10 @@ export async function renderPage(page, dpi = 150) {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, width, height);
-    await page.render({ canvasContext: ctx, canvas, viewport }).promise;
+    // intent 'print': pdf.js plant die Zeichenschritte sonst mit requestAnimationFrame ein, und das
+    // ruft der Browser in einem Tab im Hintergrund nicht auf. Die Erfassung stünde dann still, bis
+    // der Tab wieder vorne ist. Für die Texterkennung ist das Ergebnis dasselbe.
+    await page.render({ canvasContext: ctx, canvas, viewport, intent: 'print' }).promise;
     const { data } = ctx.getImageData(0, 0, width, height);
     // Release the backing store early: 40-page scans otherwise pile up canvases
     canvas.width = canvas.height = 0;
