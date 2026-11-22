@@ -51,3 +51,33 @@ describe('mapPosition', () => {
         expect(mapPosition('', 'x', 0)).toBeNull();
     });
 });
+
+describe('mapPosition bei sehr langen Texten', () => {
+    // Ein einziger langer Absatz (PDF-Text ohne Leerzeilen); die indirekte Rede ändert die
+    // Wortzahl («war» → «sei … gewesen»), so dass sich die Stellen stetig verschieben
+    const input = Array.from({ length: 900 }, (_, i) =>
+        i % 3 === 0 ? `Ich war am Tag ${i} zu Hause und sah den Hinweis${i}.` : `Dann habe ich die Kontrolle${i} gemacht.`).join('\n');
+    const output = processText(input, mann);
+
+    it('trifft dasselbe Wort auch weit hinten, in beide Richtungen', () => {
+        expect(input.split(/\s+/).length).toBeGreaterThan(2500);
+        expect(output).not.toContain('\n\n');
+        for (const needle of ['Kontrolle10 ', 'Hinweis450.', 'Kontrolle877 ', 'Hinweis897.']) {
+            const word = needle.trim();
+            expect(wordAt(output, mapPosition(input, output, at(input, needle)))).toBe(word);
+            expect(wordAt(input, mapPosition(output, input, at(output, needle)))).toBe(word);
+        }
+    });
+
+    it('trifft ein häufiges Wort am richtigen Ort', () => {
+        const target = mapPosition(input, output, at(input, 'Tag 600 '));
+        expect(output.slice(target.start, target.start + 7)).toBe('Tag 600');
+    });
+
+    it('auch über den ganzen Text, wenn die Absätze nicht übereinstimmen', () => {
+        const spaced = input.split('\n').join('\n\n');
+        for (const needle of ['Kontrolle10 ', 'Hinweis450.', 'Kontrolle877 ']) {
+            expect(wordAt(output, mapPosition(spaced, output, at(spaced, needle)))).toBe(needle.trim());
+        }
+    });
+});

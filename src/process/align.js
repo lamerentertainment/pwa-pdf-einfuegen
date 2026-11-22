@@ -4,9 +4,17 @@
 // Innerhalb eines Absatzes werden Zeilen zusammengezogen und Wörter ersetzt; zugeordnet wird
 // darum Wort für Wort über die längste gemeinsame Teilfolge. Ein ersetztes Wort ("Ich" → "Er")
 // erhält die Position zwischen seinen unveränderten Nachbarn.
+//
+// Lange Texte (die Tabelle der Teilfolge wäre zu gross, z. B. ein PDF-Text ohne Leerzeilen):
+// zuerst die ungefähre Lage über Ankerwörter (in beiden Texten genau einmal vorhanden), dann die
+// Teilfolge nur im Umfeld dieser Lage. So wird im selben Bereich nach demselben Wort mit denselben
+// Nachbarn gesucht, statt nach Anteil der Wortzahl zu schätzen.
 
 const PARAGRAPH_SPLIT = /\n[ \t]*\n/g;
 const MAX_CELLS = 4_000_000;
+// Umfeld für lange Texte: Wörter vor/nach dem angeklickten Wort und um die geschätzte Lage
+const WINDOW_FROM = 150;
+const WINDOW_TO = 400;
 
 /** Absätze mit ihrer Lage im Text (wie processText sie bildet: getrimmt, leere weggelassen). */
 export function paragraphs(text) {
@@ -82,6 +90,80 @@ export function alignWords(rawA, rawB) {
     return map;
 }
 
+/**
+ * Ankerpaare [i, j]: Wörter, die in a und b je genau einmal vorkommen, in derselben Reihenfolge
+ * (längste aufsteigende Folge, so fallen über Kreuz liegende Zufallstreffer weg).
+ */
+export function uniqueAnchors(a, b) {
+    const count = list => {
+        const map = new Map();
+        list.forEach((w, i) => {
+            if (!w) return;
+            const entry = map.get(w);
+            if (entry) entry.n++;
+            else map.set(w, { n: 1, i });
+        });
+        return map;
+    };
+    const inA = count(a);
+    const inB = count(b);
+    const pairs = [];
+    for (const [w, { n, i }] of inA) {
+        const other = inB.get(w);
+        if (n === 1 && other?.n === 1) pairs.push([i, other.i]);
+    }
+    pairs.sort((x, y) => x[0] - y[0]);
+
+    // Längste aufsteigende Folge nach j (Patience Sorting)
+    const tails = [];
+    const prev = new Array(pairs.length);
+    pairs.forEach(([, j], k) => {
+        let lo = 0;
+        let hi = tails.length;
+        while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (pairs[tails[mid]][1] < j) lo = mid + 1;
+            else hi = mid;
+        }
+        prev[k] = lo > 0 ? tails[lo - 1] : -1;
+        tails[lo] = k;
+    });
+    const result = [];
+    for (let k = tails.length ? tails[tails.length - 1] : -1; k >= 0; k = prev[k]) result.push(pairs[k]);
+    return result.reverse();
+}
+
+// Ungefähre Lage von a[index] in b: zwischen den umgebenden Ankern interpoliert
+function estimate(a, b, index) {
+    const anchors = uniqueAnchors(a, b);
+    let before = [-1, -1];
+    let after = [a.length, b.length];
+    for (const pair of anchors) {
+        if (pair[0] === index) return pair[1];
+        if (pair[0] < index) before = pair;
+        else {
+            after = pair;
+            break;
+        }
+    }
+    const t = (index - before[0]) / (after[0] - before[0]);
+    return Math.round(before[1] + t * (after[1] - before[1]));
+}
+
+/** Index des Worts in `toList`, das `fromList[index]` entspricht. */
+export function mapWordIndex(fromList, toList, index) {
+    const n = fromList.length;
+    const m = toList.length;
+    if ((n + 1) * (m + 1) <= MAX_CELLS) return alignWords(fromList, toList)[index];
+    const guess = Math.min(m - 1, Math.max(0, estimate(fromList.map(normalize), toList.map(normalize), index)));
+    const fromStart = Math.max(0, index - WINDOW_FROM);
+    const fromEnd = Math.min(n, index + WINDOW_FROM + 1);
+    const toStart = Math.max(0, guess - WINDOW_TO);
+    const toEnd = Math.min(m, guess + WINDOW_TO + 1);
+    const local = alignWords(fromList.slice(fromStart, fromEnd), toList.slice(toStart, toEnd));
+    return toStart + local[index - fromStart];
+}
+
 function wordIndexAt(list, offset) {
     if (list.length === 0) return -1;
     const inside = list.findIndex(w => offset >= w.start && offset <= w.end);
@@ -114,6 +196,6 @@ export function mapPosition(from, to, offset) {
     }
     const index = wordIndexAt(fromWords, offset);
     if (index < 0 || !toWords.length) return null;
-    const target = toWords[alignWords(fromWords.map(w => w.word), toWords.map(w => w.word))[index]];
+    const target = toWords[mapWordIndex(fromWords.map(w => w.word), toWords.map(w => w.word), index)];
     return { start: target.start, end: target.end };
 }
