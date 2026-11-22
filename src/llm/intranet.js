@@ -2,14 +2,16 @@
 // Text erzeugen lassen.
 //
 // Anders als die Sprachmodelle im Browser schickt die interne KI den Eingabetext an einen Server,
-// allerdings nur an diesen einen im Intranet. Das geht nur im Modus «verbunden»; der Torwächter
-// (public/sw-policy.js) und die CSP (csp.js) lassen genau diese Adresse zu, und jede Anfrage
-// erscheint im Verbindungsprotokoll.
+// allerdings nur an diesen einen im Intranet. Das geht nur, wenn oben «Lokale KI-Anfragen» erlaubt
+// sind (unabhängig vom Internet-Modus); der Torwächter (public/sw-policy.js) und die CSP (csp.js)
+// lassen genau diese Adresse zu, und jede Anfrage erscheint im Verbindungsprotokoll.
 //
 // Der API-Key gehört der Nutzerin bzw. dem Nutzer (OpenWebUI → Einstellungen → Konto →
-// API-Schlüssel). Die App liefert keinen mit: Er wird nur in diesem Browser gespeichert.
+// API-Schlüssel). Die App liefert keinen mit: Er wird nur in diesem Browser gespeichert. Erst mit
+// dem Key nimmt die App Kontakt mit dem Server auf; dabei fragt Chrome einmal nach der Berechtigung
+// «Lokales Netzwerk».
 import { reactive, readonly } from 'vue';
-import { isBlocked, wakeGatekeeper } from '../net/connection.js';
+import { isBlocked, setLokaleKi, wakeGatekeeper } from '../net/connection.js';
 
 export const INTRANET_ORIGIN = 'https://aiacoder-v001.kt.lunet.ch'; // gleich wie in sw-policy.js und csp.js
 export const INTRANET_MODEL = 'gemma4:31b';
@@ -28,7 +30,7 @@ function loadKey() {
 }
 
 const state = reactive({
-    /** 'unbekannt' | 'pruefen' | 'erreichbar' | 'nicht-erreichbar' | 'gesperrt' (Berechtigung abgelehnt) */
+    /** 'unbekannt' | 'pruefen' | 'erreichbar' | 'nicht-erreichbar' | 'gesperrt' (Chrome-Berechtigung abgelehnt) | 'aus' (Schalter gesperrt) */
     status: 'unbekannt',
     apiKey: loadKey(),
     /** Ergebnis der Key-Prüfung: null | { ok: true } | { ok: false, error } */
@@ -52,6 +54,28 @@ export function setApiKey(key) {
 }
 
 const authHeaders = () => ({ Authorization: `Bearer ${state.apiKey}` });
+const GESPERRT = 'Lokale KI-Anfragen sind gesperrt. Oben «Lokale KI-Anfragen» erlauben.';
+
+/** Key speichern, lokale KI-Anfragen erlauben und die Verbindung prüfen (löst die Chrome-Rückfrage aus). */
+export async function einrichten(key) {
+    setApiKey(key);
+    if (!state.apiKey) return;
+    await setLokaleKi(true, 'API-Key eingetragen');
+    await pruefen();
+}
+
+/** Key löschen und lokale KI-Anfragen wieder sperren. */
+export async function entfernen() {
+    setApiKey('');
+    state.status = 'unbekannt';
+    await setLokaleKi(false, 'API-Key gelöscht');
+}
+
+/** Erreichbarkeit und, wenn erreichbar, Key und Modell prüfen. */
+export async function pruefen() {
+    if ((await checkReachable()) === 'erreichbar') await checkKey();
+    else state.keyCheck = null;
+}
 
 /**
  * Stand der Chrome-Berechtigung «Lokales Netzwerk» für diese Website: 'granted' | 'prompt' |
@@ -79,7 +103,8 @@ export async function checkReachable() {
     try {
         const timeout = permission === 'prompt' ? PROMPT_TIMEOUT_MS : CHECK_TIMEOUT_MS;
         const response = await fetch(`${INTRANET_ORIGIN}/health`, { cache: 'no-store', signal: AbortSignal.timeout(timeout) });
-        state.status = response.ok && !isBlocked(response) ? 'erreichbar' : 'nicht-erreichbar';
+        if (isBlocked(response)) state.status = 'aus';
+        else state.status = response.ok ? 'erreichbar' : 'nicht-erreichbar';
     } catch {
         state.status = (await localNetworkPermission()) === 'denied' ? 'gesperrt' : 'nicht-erreichbar';
     }
@@ -90,7 +115,7 @@ export async function checkReachable() {
 export async function checkKey() {
     try {
         const response = await fetch(`${INTRANET_ORIGIN}/api/models`, { cache: 'no-store', headers: authHeaders(), signal: AbortSignal.timeout(10000) });
-        if (isBlocked(response)) throw new Error('Vom Torwächter blockiert. Zuerst oben «Internetverbindung herstellen» wählen.');
+        if (isBlocked(response)) throw new Error(GESPERRT);
         if (response.status === 401 || response.status === 403) throw new Error('Der API-Key wird nicht akzeptiert.');
         if (!response.ok) throw new Error(`Server antwortet mit ${response.status}.`);
         const ids = ((await response.json()).data ?? []).map(m => m.id);
@@ -145,7 +170,7 @@ export async function generateIntranet(prompt, { onToken, signal } = {}) {
             body: JSON.stringify({ model: INTRANET_MODEL, stream: true, messages: [{ role: 'user', content: prompt }] }),
             signal,
         });
-        if (isBlocked(response)) throw new Error('Vom Torwächter blockiert. Für die interne KI zuerst oben «Internetverbindung herstellen» wählen.');
+        if (isBlocked(response)) throw new Error(GESPERRT);
         if (response.status === 401 || response.status === 403) throw new Error('Der API-Key wird nicht akzeptiert. Unter «Modelle/Programmupdate» prüfen.');
         if (!response.ok) throw new Error(`Die interne KI antwortet mit ${response.status}.`);
 

@@ -54,16 +54,20 @@ async function tx(store, mode, fn) {
 const getState = key => tx('state', 'readonly', store => store.get(key));
 const setState = (key, value) => tx('state', 'readwrite', store => store.put(value, key));
 
-// Zuletzt gelesener Modus im Arbeitsspeicher: Für die Prüfung der internen KI muss der
-// fetch-Handler sofort entscheiden, ohne auf die Datenbank zu warten (siehe passThrough in
-// sw-policy.js). Nach einem Neustart des Service Workers ist er leer und gilt als «lokal»; die
-// Seite weckt den Torwächter deshalb vor der Prüfung mit GET_STATUS.
-let modeMemo = null;
-
 async function currentMode() {
-    const mode = swPolicy.effectiveMode(await getState('mode'), Date.now());
-    modeMemo = mode;
-    return mode;
+    return swPolicy.effectiveMode(await getState('mode'), Date.now());
+}
+
+// Schalter «Lokale KI-Anfragen» (interne KI im Intranet), gespeichert wie der Modus.
+// Zuletzt gelesener Wert im Arbeitsspeicher: Für die Prüfung der internen KI muss der fetch-Handler
+// sofort entscheiden, ohne auf die Datenbank zu warten (siehe passThrough in sw-policy.js). Nach
+// einem Neustart des Service Workers ist er leer und gilt als gesperrt; die Seite weckt den
+// Torwächter deshalb vor der Prüfung mit GET_STATUS.
+let lokaleKiMemo = false;
+
+async function lokaleKi() {
+    lokaleKiMemo = (await getState('lokaleKi')) === true;
+    return lokaleKiMemo;
 }
 
 async function broadcast(message) {
@@ -136,7 +140,7 @@ async function handle(request) {
     }
 
     const { mode } = await currentMode();
-    const verdict = swPolicy.decide({ url: request.url, origin: self.location.origin, method: request.method, mode });
+    const verdict = swPolicy.decide({ url: request.url, origin: self.location.origin, method: request.method, mode, lokaleKi: await lokaleKi() });
     const entry = { kind: 'netz', url: request.url, method: request.method, purpose: verdict.purpose, label: verdict.label };
 
     if (!verdict.allow) {
@@ -155,13 +159,12 @@ async function handle(request) {
 
 self.addEventListener('fetch', event => {
     const { request } = event;
-    const mode = swPolicy.effectiveMode(modeMemo, Date.now()).mode;
-    if (swPolicy.passThrough({ url: request.url, method: request.method, mode })) {
+    if (swPolicy.passThrough({ url: request.url, method: request.method, lokaleKi: lokaleKiMemo })) {
         // Kein respondWith: Der Browser führt die Anfrage für die Seite aus (Rückfrage «Lokales Netzwerk»)
-        const verdict = swPolicy.decide({ url: request.url, origin: self.location.origin, method: request.method, mode });
+        const { purpose, label } = swPolicy.classify(request.url, self.location.origin);
         event.waitUntil(log({
-            kind: 'netz', url: request.url, method: request.method, purpose: verdict.purpose, label: verdict.label,
-            allow: true, reason: 'Verbunden-Modus, direkt von der Seite (Chrome-Berechtigung «Lokales Netzwerk»)',
+            kind: 'netz', url: request.url, method: request.method, purpose, label,
+            allow: true, reason: 'Lokale KI-Anfragen erlaubt, direkt von der Seite (Chrome-Berechtigung «Lokales Netzwerk»)',
         }));
         return;
     }
@@ -232,7 +235,22 @@ self.addEventListener('activate', event => {
 async function onMessage(type, data) {
     switch (type) {
         case 'GET_STATUS':
-            return { ...(await currentMode()), build: BUILD };
+            return { ...(await currentMode()), lokaleKi: await lokaleKi(), build: BUILD };
+        case 'SET_LOKALE_KI': {
+            const before = await lokaleKi();
+            await setState('lokaleKi', data.an === true);
+            const after = await lokaleKi();
+            if (before !== after) {
+                await log({
+                    kind: 'modus',
+                    purpose: 'modus',
+                    label: after ? 'Lokale KI-Anfragen erlaubt' : 'Lokale KI-Anfragen gesperrt',
+                    reason: data.reason || (after ? 'Interne KI im Intranet freigegeben' : 'Interne KI im Intranet gesperrt'),
+                });
+            }
+            await broadcast({ type: 'LOKALE_KI', an: after });
+            return after;
+        }
         case 'SET_MODE': {
             const before = await currentMode();
             await setState('mode', swPolicy.modeState(data.mode, Date.now(), data.minutes));

@@ -7,9 +7,10 @@
  * Grundsatz:
  * - Modus «lokal» (Standard, und nach jedem Neustart): keine einzige Netzwerkanfrage.
  * - Modus «verbunden» (nur auf Knopfdruck, endet automatisch): nur Abrufe (GET/HEAD), nur zur
- *   eigenen Website (App-Update) und zu Hugging Face (Modelle). Die einzige Ausnahme ist die
- *   interne KI im Intranet: Ihr darf die App den Eingabetext von Stufe 3 senden (POST), und nur an
- *   genau diese eine Adresse.
+ *   eigenen Website (App-Update) und zu Hugging Face (Modelle).
+ * - Unabhängig davon die interne KI im Intranet, nur wenn «Lokale KI-Anfragen» erlaubt sind (eigener
+ *   Schalter, erscheint mit dem API-Key): Ihr darf die App den Eingabetext von Stufe 3 senden (POST),
+ *   und nur an genau diese eine Adresse. Sie ist kein Internet, sondern ein Server im Intranet.
  * Dateien, die bereits im Browser gespeichert sind, werden in beiden Modi ohne Netz geliefert.
  */
 (function (root) {
@@ -39,10 +40,11 @@
      * Berechtigung «Lokales Netzwerk» und fragt danach nur bei Anfragen einer Seite, nie bei
      * Anfragen eines Service Workers – diese scheitern ohne Berechtigung stumm. Ist sie einmal
      * erteilt, gilt sie für die ganze Website, und alles Weitere läuft wieder über den Torwächter.
-     * Nur Abruf, nur diese eine Adresse, nur im Modus «verbunden»; protokolliert wird trotzdem.
+     * Nur Abruf, nur diese eine Adresse, nur wenn lokale KI-Anfragen erlaubt sind; protokolliert
+     * wird trotzdem.
      */
-    function passThrough({ url, method, mode }) {
-        if (mode !== MODES.VERBUNDEN || method !== 'GET') return false;
+    function passThrough({ url, method, lokaleKi }) {
+        if (lokaleKi !== true || method !== 'GET') return false;
         try {
             const u = new URL(url);
             return u.origin === INTRANET_ORIGIN && u.pathname === '/health' && !u.search;
@@ -89,20 +91,22 @@
      * Entscheid für eine Anfrage, die nicht aus dem Browser-Speicher beantwortet werden kann.
      * @returns {{allow: boolean, purpose: string, label: string, reason: string}}
      */
-    function decide({ url, origin, method, mode }) {
+    function decide({ url, origin, method, mode, lokaleKi = false }) {
         const c = classify(url, origin);
+        // Interne KI: hängt am Schalter «Lokale KI-Anfragen», nicht am Internet-Modus
+        const intranet = c.purpose.startsWith('intern-') ? INTRANET_PATHS[new URL(url).pathname] : null;
+        if (intranet) {
+            if (lokaleKi !== true) return { allow: false, ...c, reason: 'Lokale KI-Anfragen sind gesperrt' };
+            if (!intranet.methods.includes(method)) {
+                return { allow: false, ...c, reason: `Bei der internen KI ist hier nur ${intranet.methods.join('/')} erlaubt` };
+            }
+            return { allow: true, ...c, reason: 'Lokale KI-Anfragen erlaubt' };
+        }
         if (mode !== MODES.VERBUNDEN) {
             return { allow: false, ...c, reason: 'Lokal-Modus: keine Internetverbindung' };
         }
         if (c.purpose === 'fremd') {
             return { allow: false, ...c, reason: 'Ziel steht nicht auf der Freigabeliste' };
-        }
-        const intranet = c.purpose.startsWith('intern-') ? INTRANET_PATHS[new URL(url).pathname] : null;
-        if (intranet) {
-            if (!intranet.methods.includes(method)) {
-                return { allow: false, ...c, reason: `Bei der internen KI ist hier nur ${intranet.methods.join('/')} erlaubt` };
-            }
-            return { allow: true, ...c, reason: intranet.purpose === 'intern-ki' ? 'Verbunden-Modus, interne KI' : 'Verbunden-Modus' };
         }
         if (method !== 'GET' && method !== 'HEAD') {
             return { allow: false, ...c, reason: 'Die App sendet keine Daten – nur Abrufe sind erlaubt' };

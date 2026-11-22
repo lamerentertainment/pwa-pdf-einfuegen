@@ -1,7 +1,8 @@
 <script setup>
 import { computed, onUnmounted, ref } from 'vue';
-import { GlobeAltIcon, LockClosedIcon } from '@heroicons/vue/24/outline';
-import { connection, DEFAULT_MINUTES, setMode } from '../net/connection.js';
+import { CpuChipIcon, GlobeAltIcon, LockClosedIcon } from '@heroicons/vue/24/outline';
+import { connection, DEFAULT_MINUTES, setLokaleKi, setMode } from '../net/connection.js';
+import { intranet } from '../llm/intranet.js';
 
 const dialog = ref(null);
 const minutes = ref(DEFAULT_MINUTES);
@@ -23,6 +24,15 @@ async function connect() {
     try {
         await setMode('verbunden', { minutes: minutes.value });
         dialog.value.close();
+    } catch (err) {
+        error.value = err.message;
+    }
+}
+
+async function toggleLokaleKi() {
+    error.value = null;
+    try {
+        await setLokaleKi(!connection.lokaleKi, connection.lokaleKi ? 'Vom Nutzer gesperrt' : 'Vom Nutzer erlaubt');
     } catch (err) {
         error.value = err.message;
     }
@@ -50,6 +60,21 @@ async function disconnect() {
       <GlobeAltIcon class="size-4" /> Verbunden · {{ remaining }}
     </div>
 
+    <!-- Erscheint erst, wenn ein API-Key für die interne KI gespeichert ist -->
+    <button
+      v-if="intranet.apiKey"
+      class="btn btn-sm gap-1"
+      :class="connection.lokaleKi ? 'btn-ghost' : 'btn-error btn-soft'"
+      :aria-pressed="connection.lokaleKi"
+      :disabled="unavailable"
+      :title="connection.lokaleKi
+        ? 'Lokale KI-Anfragen erlaubt: Die App darf den Eingabetext von Stufe 3 an die interne KI im Intranet senden, wenn du sie dort wählst (kein Internet, nur dieser eine Server). Klicken, um das zu sperren.'
+        : 'Lokale KI-Anfragen gesperrt: Die App spricht die interne KI im Intranet nicht an. Klicken, um es wieder zu erlauben.'"
+      @click="toggleLokaleKi"
+    >
+      <CpuChipIcon class="size-4" /> {{ connection.lokaleKi ? 'Lokale KI-Anfragen erlaubt' : 'Lokale KI-Anfragen gesperrt' }}
+    </button>
+
     <button v-if="!connected" class="btn btn-sm" :disabled="unavailable" @click="dialog.showModal()">
       Internetverbindung herstellen
     </button>
@@ -61,13 +86,15 @@ async function disconnect() {
         <p class="mt-3 text-sm">Im Modus <strong>Verbunden</strong> darf die App:</p>
         <ul class="mt-1 list-disc pl-5 text-sm">
           <li>nach einer neuen App-Version suchen und sie laden, wenn du das willst,</li>
-          <li>Modelle laden, die du auf der Seite <em>Modelle/Programmupdate</em> auswählst,</li>
-          <li>prüfen, ob die interne KI im Intranet erreichbar ist.</li>
+          <li>Modelle laden, die du auf der Seite <em>Modelle/Programmupdate</em> auswählst.</li>
         </ul>
         <p class="mt-3 text-sm">
-          Deine Dokumente verlassen den Browser nicht. Einzige Ausnahme: Wählst du in Stufe 3 die
-          <em>interne KI</em> und drückst «Umformen», geht der Eingabetext an den Server im Intranet, und nur dorthin.
+          Deine Dokumente verlassen den Browser nie. Die App sendet keine Daten, sie ruft nur ab.
           Jede Verbindung erscheint im Verbindungsprotokoll.
+        </p>
+        <p class="mt-3 text-sm opacity-80">
+          Die interne KI im Intranet hängt nicht davon ab; sie hat ihren eigenen Schalter «Lokale KI-Anfragen»,
+          der erscheint, sobald ein API-Key eingetragen ist.
         </p>
         <label class="mt-4 flex items-center gap-3 text-sm">
           Automatisch trennen nach

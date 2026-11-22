@@ -15,6 +15,8 @@ const state = reactive({
     error: null,
     mode: 'lokal',
     until: null,
+    /** Schalter «Lokale KI-Anfragen» (interne KI im Intranet), gemerkt; nur mit API-Key sichtbar */
+    lokaleKi: false,
     log: [],
     update: { status: 'idle', remote: null, error: null }, // idle|pruefen|aktuell|verfuegbar|laden|bereit|fehler
 });
@@ -49,6 +51,7 @@ function onMessage(event) {
     const message = event.data || {};
     if (message.type === 'NETLOG') pushLog(message.entry);
     if (message.type === 'MODE') applyMode(message);
+    if (message.type === 'LOKALE_KI') state.lokaleKi = message.an === true;
 }
 
 function waitForController(ms) {
@@ -88,6 +91,8 @@ export async function initConnection() {
         await waitForController(30000);
         // Jeder Start beginnt im Modus «lokal»
         applyMode(await send({ type: 'SET_MODE', mode: 'lokal', reason: 'App gestartet' }));
+        // Der Schalter «Lokale KI-Anfragen» bleibt über Neustarts erhalten (im Torwächter gespeichert)
+        state.lokaleKi = (await send({ type: 'GET_STATUS' })).lokaleKi === true;
         state.log = await send({ type: 'GET_LOG' });
         const registration = await navigator.serviceWorker.getRegistration();
         if (registration?.waiting) state.update.status = 'bereit';
@@ -109,6 +114,17 @@ export async function setMode(mode, { minutes = DEFAULT_MINUTES, reason } = {}) 
     scheduleExpiry();
 }
 
+/** Schalter «Lokale KI-Anfragen»: Anfragen an die interne KI im Intranet erlauben oder sperren. */
+export async function setLokaleKi(an, reason) {
+    if (state.gatekeeper === 'aktiv') {
+        state.lokaleKi = await send({ type: 'SET_LOKALE_KI', an, reason });
+    } else {
+        // Ohne Torwächter (Entwicklungsserver) nur die Anzeige
+        state.lokaleKi = an;
+        pushLog({ ts: Date.now(), kind: 'modus', purpose: 'modus', label: an ? 'Lokale KI-Anfragen erlaubt' : 'Lokale KI-Anfragen gesperrt', reason: 'Entwicklungsmodus: Netzwerk wird nicht gesperrt' });
+    }
+}
+
 export async function clearLog() {
     if (state.gatekeeper === 'aktiv') await send({ type: 'CLEAR_LOG' });
     state.log = [];
@@ -121,7 +137,9 @@ export async function clearLog() {
 export async function wakeGatekeeper() {
     if (state.gatekeeper !== 'aktiv') return;
     try {
-        applyMode(await send({ type: 'GET_STATUS' }));
+        const status = await send({ type: 'GET_STATUS' });
+        applyMode(status);
+        state.lokaleKi = status.lokaleKi === true;
     } catch {
         // ohne Antwort bleibt der Torwächter bei «lokal» und blockiert
     }

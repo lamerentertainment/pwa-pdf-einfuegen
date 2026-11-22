@@ -51,9 +51,9 @@ const intranetModel = computed(() => (intranet.apiKey ? {
 } : null));
 const choices = computed(() => [...installed.value, ...(intranetModel.value ? [intranetModel.value] : [])]);
 const model = computed(() => choices.value.find(m => m.id === modelId.value));
-const connected = computed(() => connection.mode === 'verbunden');
+const lokaleKi = computed(() => connection.lokaleKi);
 const promptEdited = computed(() => promptTemplate.value !== preset.value.prompt);
-const ready = computed(() => model.value && phase.value === 'idle' && (model.value.remote ? connected.value : gpu.value?.ok));
+const ready = computed(() => model.value && phase.value === 'idle' && (model.value.remote ? lokaleKi.value : gpu.value?.ok));
 const canRun = computed(() => ready.value && input.value.trim());
 
 // Markierung im Eingabefeld: nur dieser Teil geht auf Wunsch an das Sprachmodell
@@ -188,7 +188,7 @@ function download() {
         <div v-if="model?.remote" role="alert" class="alert alert-info alert-soft text-sm">
           <span>
             Gewählt ist die <strong>interne KI</strong>: Der Eingabetext wird an den Server im Intranet gesendet und dort verarbeitet.
-            <template v-if="!connected"> Dafür oben zuerst «Internetverbindung herstellen» wählen.</template>
+            <template v-if="!lokaleKi"> Dafür oben zuerst «Lokale KI-Anfragen» erlauben.</template>
           </span>
         </div>
 

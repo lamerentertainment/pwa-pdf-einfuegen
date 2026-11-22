@@ -44,8 +44,12 @@ function target(entry) {
             <h3 class="font-semibold text-warning">Verbunden (nur auf Knopfdruck)</h3>
             <p class="opacity-80">
               Erlaubt nur Abrufe, und nur zu dieser Website (App-Update) und zu Hugging Face (Modelle). Die App sendet
-              keine Daten, ausser du nutzt in Stufe 3 die interne KI: Dann geht der Eingabetext an den Server im
-              Intranet (<code>aiacoder-v001.kt.lunet.ch</code>), und nur dorthin. Die Verbindung endet automatisch.
+              keine Daten. Die Verbindung endet automatisch.
+            </p>
+            <p class="mt-2 opacity-80">
+              Unabhängig davon: Ist ein API-Key für die interne KI eingetragen, erlaubt oder sperrt der Schalter
+              <strong>«Lokale KI-Anfragen»</strong> Anfragen an den Server im Intranet (<code>aiacoder-v001.kt.lunet.ch</code>).
+              Nur wenn er erlaubt ist und du in Stufe 3 die interne KI wählst, geht der Eingabetext dorthin, und nur dorthin.
             </p>
           </div>
         </div>

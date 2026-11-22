@@ -78,22 +78,33 @@ describe('Verbunden-Modus', () => {
 
 describe('Interne KI (Intranet)', () => {
     const BASE = 'https://aiacoder-v001.kt.lunet.ch';
+    const ki = (url, method = 'GET', { mode = 'lokal', lokaleKi = true } = {}) => policy.decide({ url, origin: ORIGIN, method, mode, lokaleKi });
 
-    it('ist im Lokal-Modus gesperrt, auch die Prüfung', () => {
-        expect(decide(`${BASE}/health`, 'lokal').allow).toBe(false);
-        expect(decide(`${BASE}/api/chat/completions`, 'lokal', 'POST').allow).toBe(false);
+    it('ist ohne den Schalter «Lokale KI-Anfragen» gesperrt, auch im Modus «verbunden»', () => {
+        for (const mode of ['lokal', 'verbunden']) {
+            expect(ki(`${BASE}/health`, 'GET', { mode, lokaleKi: false }).allow).toBe(false);
+            expect(ki(`${BASE}/api/chat/completions`, 'POST', { mode, lokaleKi: false }).allow).toBe(false);
+        }
+        expect(policy.decide({ url: `${BASE}/health`, origin: ORIGIN, method: 'GET', mode: 'verbunden' }).allow).toBe(false);
     });
 
-    it('erlaubt im Verbunden-Modus die Prüfung und das Senden an die Textschnittstelle', () => {
-        expect(decide(`${BASE}/health`, 'verbunden')).toMatchObject({ allow: true, purpose: 'intern-pruefung' });
-        expect(decide(`${BASE}/api/models`, 'verbunden')).toMatchObject({ allow: true, purpose: 'intern-pruefung' });
-        expect(decide(`${BASE}/api/chat/completions`, 'verbunden', 'POST')).toMatchObject({ allow: true, purpose: 'intern-ki' });
+    it('ist mit dem Schalter erlaubt, unabhängig vom Internet-Modus', () => {
+        for (const mode of ['lokal', 'verbunden']) {
+            expect(ki(`${BASE}/health`, 'GET', { mode })).toMatchObject({ allow: true, purpose: 'intern-pruefung' });
+            expect(ki(`${BASE}/api/models`, 'GET', { mode })).toMatchObject({ allow: true, purpose: 'intern-pruefung' });
+            expect(ki(`${BASE}/api/chat/completions`, 'POST', { mode })).toMatchObject({ allow: true, purpose: 'intern-ki' });
+        }
+    });
+
+    it('öffnet mit dem Schalter kein Internet', () => {
+        expect(policy.decide({ url: HF, origin: ORIGIN, method: 'GET', mode: 'lokal', lokaleKi: true }).allow).toBe(false);
+        expect(policy.decide({ url: `${ORIGIN}/version.json`, origin: ORIGIN, method: 'GET', mode: 'lokal', lokaleKi: true }).allow).toBe(false);
     });
 
     it('sendet nur an die Textschnittstelle und ruft diese nicht ab', () => {
-        expect(decide(`${BASE}/health`, 'verbunden', 'POST').allow).toBe(false);
-        expect(decide(`${BASE}/api/models`, 'verbunden', 'DELETE').allow).toBe(false);
-        expect(decide(`${BASE}/api/chat/completions`, 'verbunden', 'GET').allow).toBe(false);
+        expect(ki(`${BASE}/health`, 'POST').allow).toBe(false);
+        expect(ki(`${BASE}/api/models`, 'DELETE').allow).toBe(false);
+        expect(ki(`${BASE}/api/chat/completions`, 'GET').allow).toBe(false);
     });
 
     it.each([
@@ -103,20 +114,23 @@ describe('Interne KI (Intranet)', () => {
         'https://aiacoder-v001.kt.lunet.ch.evil.example/api/chat/completions',
         'http://aiacoder-v001.kt.lunet.ch/api/chat/completions',
     ])('blockiert alles andere: %s', url => {
-        expect(decide(url, 'verbunden', 'POST').allow).toBe(false);
-        expect(decide(url, 'verbunden', 'GET').allow).toBe(false);
+        for (const mode of ['lokal', 'verbunden']) {
+            expect(ki(url, 'POST', { mode }).allow).toBe(false);
+            expect(ki(url, 'GET', { mode }).allow).toBe(false);
+        }
     });
 });
 
 describe('Prüfung der internen KI direkt von der Seite', () => {
     const HEALTH = 'https://aiacoder-v001.kt.lunet.ch/health';
-    const pass = (url, mode, method = 'GET') => policy.passThrough({ url, method, mode });
+    const pass = (url, lokaleKi, method = 'GET') => policy.passThrough({ url, method, lokaleKi });
 
-    it('lässt nur den Abruf von /health im Modus «verbunden» vorbei', () => {
-        expect(pass(HEALTH, 'verbunden')).toBe(true);
-        expect(pass(HEALTH, 'lokal')).toBe(false);
+    it('lässt nur den Abruf von /health vorbei, und nur bei erlaubten lokalen KI-Anfragen', () => {
+        expect(pass(HEALTH, true)).toBe(true);
+        expect(pass(HEALTH, false)).toBe(false);
         expect(pass(HEALTH, undefined)).toBe(false);
-        expect(pass(HEALTH, 'verbunden', 'POST')).toBe(false);
+        expect(pass(HEALTH, 'ja')).toBe(false);
+        expect(pass(HEALTH, true, 'POST')).toBe(false);
     });
 
     it.each([
@@ -129,6 +143,6 @@ describe('Prüfung der internen KI direkt von der Seite', () => {
         `${ORIGIN}/health`,
         'kein url',
     ])('alles andere geht durch den Torwächter: %s', url => {
-        expect(pass(url, 'verbunden')).toBe(false);
+        expect(pass(url, true)).toBe(false);
     });
 });
