@@ -54,8 +54,16 @@ async function tx(store, mode, fn) {
 const getState = key => tx('state', 'readonly', store => store.get(key));
 const setState = (key, value) => tx('state', 'readwrite', store => store.put(value, key));
 
+// Zuletzt gelesener Modus im Arbeitsspeicher: Für die Prüfung der internen KI muss der
+// fetch-Handler sofort entscheiden, ohne auf die Datenbank zu warten (siehe passThrough in
+// sw-policy.js). Nach einem Neustart des Service Workers ist er leer und gilt als «lokal»; die
+// Seite weckt den Torwächter deshalb vor der Prüfung mit GET_STATUS.
+let modeMemo = null;
+
 async function currentMode() {
-    return swPolicy.effectiveMode(await getState('mode'), Date.now());
+    const mode = swPolicy.effectiveMode(await getState('mode'), Date.now());
+    modeMemo = mode;
+    return mode;
 }
 
 async function broadcast(message) {
@@ -146,7 +154,18 @@ async function handle(request) {
 }
 
 self.addEventListener('fetch', event => {
-    event.respondWith(handle(event.request));
+    const { request } = event;
+    const mode = swPolicy.effectiveMode(modeMemo, Date.now()).mode;
+    if (swPolicy.passThrough({ url: request.url, method: request.method, mode })) {
+        // Kein respondWith: Der Browser führt die Anfrage für die Seite aus (Rückfrage «Lokales Netzwerk»)
+        const verdict = swPolicy.decide({ url: request.url, origin: self.location.origin, method: request.method, mode });
+        event.waitUntil(log({
+            kind: 'netz', url: request.url, method: request.method, purpose: verdict.purpose, label: verdict.label,
+            allow: true, reason: 'Verbunden-Modus, direkt von der Seite (Chrome-Berechtigung «Lokales Netzwerk»)',
+        }));
+        return;
+    }
+    event.respondWith(handle(request));
 });
 
 // --- Installation und Updates ----------------------------------------------------------------

@@ -107,3 +107,28 @@ describe('Interne KI (Intranet)', () => {
         expect(decide(url, 'verbunden', 'GET').allow).toBe(false);
     });
 });
+
+describe('Prüfung der internen KI direkt von der Seite', () => {
+    const HEALTH = 'https://aiacoder-v001.kt.lunet.ch/health';
+    const pass = (url, mode, method = 'GET') => policy.passThrough({ url, method, mode });
+
+    it('lässt nur den Abruf von /health im Modus «verbunden» vorbei', () => {
+        expect(pass(HEALTH, 'verbunden')).toBe(true);
+        expect(pass(HEALTH, 'lokal')).toBe(false);
+        expect(pass(HEALTH, undefined)).toBe(false);
+        expect(pass(HEALTH, 'verbunden', 'POST')).toBe(false);
+    });
+
+    it.each([
+        'https://aiacoder-v001.kt.lunet.ch/api/models',
+        'https://aiacoder-v001.kt.lunet.ch/api/chat/completions',
+        'https://aiacoder-v001.kt.lunet.ch/health?x=1',
+        'https://aiacoder-v001.kt.lunet.ch/health/db',
+        'https://aiacoder-v001.kt.lunet.ch.evil.example/health',
+        'http://aiacoder-v001.kt.lunet.ch/health',
+        `${ORIGIN}/health`,
+        'kein url',
+    ])('alles andere geht durch den Torwächter: %s', url => {
+        expect(pass(url, 'verbunden')).toBe(false);
+    });
+});

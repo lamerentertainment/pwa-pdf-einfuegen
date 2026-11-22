@@ -106,7 +106,11 @@ So ist das umgesetzt, und hier lässt es sich nachprüfen:
   bleibt in diesem Browser. Die App liefert keinen Key mit. Wer sie wählt und «Umformen» drückt,
   schickt den Eingabetext an diesen Server: Der Torwächter erlaubt dafür `POST` an genau
   `/api/chat/completions`, sonst nur `GET` an `/health` und `/api/models`, und alles nur im Modus
-  Verbunden. Der Server muss die Origin der App per CORS zulassen.
+  Verbunden. Der Server muss die Origin der App per CORS zulassen. Weil der Server im lokalen Netz
+  steht, verlangt Chrome die Berechtigung «Lokales Netzwerk» und fragt danach nur bei Anfragen einer
+  Seite, nie bei solchen eines Service Workers. Deshalb lässt der Torwächter die Prüfung `GET /health`
+  (nur sie, nur im Modus Verbunden) direkt von der Seite ins Netz und protokolliert sie; nach der
+  einmaligen Erlaubnis gehen alle weiteren Anfragen wieder über ihn.
 - **Nachvollziehbarer Build**: Veröffentlicht wird nur per [GitHub Action](.github/workflows/deploy.yml)
   aus diesem Repository. Die App zeigt in der Fusszeile den Commit, aus dem sie gebaut wurde.
 

@@ -33,6 +33,24 @@
         '/api/chat/completions': { purpose: 'intern-ki', label: 'Text an interne KI (Intranet)', methods: ['POST'] },
     });
 
+    /**
+     * Die Prüfung der internen KI geht ausnahmsweise direkt von der Seite ins Netz, ohne dass der
+     * Service Worker sie selbst ausführt. Grund: Chrome verlangt für Server im lokalen Netz die
+     * Berechtigung «Lokales Netzwerk» und fragt danach nur bei Anfragen einer Seite, nie bei
+     * Anfragen eines Service Workers – diese scheitern ohne Berechtigung stumm. Ist sie einmal
+     * erteilt, gilt sie für die ganze Website, und alles Weitere läuft wieder über den Torwächter.
+     * Nur Abruf, nur diese eine Adresse, nur im Modus «verbunden»; protokolliert wird trotzdem.
+     */
+    function passThrough({ url, method, mode }) {
+        if (mode !== MODES.VERBUNDEN || method !== 'GET') return false;
+        try {
+            const u = new URL(url);
+            return u.origin === INTRANET_ORIGIN && u.pathname === '/health' && !u.search;
+        } catch {
+            return false;
+        }
+    }
+
     /** Gespeicherter Zustand für einen gewünschten Modus. */
     function modeState(mode, now, minutes) {
         if (mode !== MODES.VERBUNDEN) return { mode: MODES.LOKAL, until: null };
@@ -94,6 +112,6 @@
 
     root.swPolicy = Object.freeze({
         MODES, DEFAULT_MINUTES, MAX_MINUTES, REMOTE_ALLOWLIST, INTRANET_ORIGIN,
-        modeState, effectiveMode, classify, decide,
+        modeState, effectiveMode, classify, decide, passThrough,
     });
 })(typeof self !== 'undefined' ? self : globalThis);

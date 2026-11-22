@@ -9,13 +9,15 @@
 // Der API-Key gehört der Nutzerin bzw. dem Nutzer (OpenWebUI → Einstellungen → Konto →
 // API-Schlüssel). Die App liefert keinen mit: Er wird nur in diesem Browser gespeichert.
 import { reactive, readonly } from 'vue';
-import { isBlocked } from '../net/connection.js';
+import { isBlocked, wakeGatekeeper } from '../net/connection.js';
 
 export const INTRANET_ORIGIN = 'https://aiacoder-v001.kt.lunet.ch'; // gleich wie in sw-policy.js und csp.js
 export const INTRANET_MODEL = 'gemma4:31b';
 export const INTRANET_ID = `intern:${INTRANET_MODEL}`;
 const KEY_STORAGE = 'intern.apiKey';
-const CHECK_TIMEOUT_MS = 4000;
+const CHECK_TIMEOUT_MS = 8000;
+// Solange Chrome nach der Berechtigung «Lokales Netzwerk» fragt, wartet die Anfrage auf die Antwort
+const PROMPT_TIMEOUT_MS = 120000;
 
 function loadKey() {
     try {
@@ -26,7 +28,7 @@ function loadKey() {
 }
 
 const state = reactive({
-    /** 'unbekannt' | 'pruefen' | 'erreichbar' | 'nicht-erreichbar' */
+    /** 'unbekannt' | 'pruefen' | 'erreichbar' | 'nicht-erreichbar' | 'gesperrt' (Berechtigung abgelehnt) */
     status: 'unbekannt',
     apiKey: loadKey(),
     /** Ergebnis der Key-Prüfung: null | { ok: true } | { ok: false, error } */
@@ -52,16 +54,34 @@ export function setApiKey(key) {
 const authHeaders = () => ({ Authorization: `Bearer ${state.apiKey}` });
 
 /**
+ * Stand der Chrome-Berechtigung «Lokales Netzwerk» für diese Website: 'granted' | 'prompt' |
+ * 'denied', oder null, wenn der Browser sie nicht kennt. Nie nach 'local-network-access' fragen:
+ * Ältere Chrome-Versionen stürzen bei diesem Namen ab, ohne dass try/catch hilft.
+ */
+export async function localNetworkPermission() {
+    try {
+        return (await navigator.permissions.query({ name: 'local-network' })).state;
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Ist der Server erreichbar (also: ist dieser Rechner im Intranet)? /health braucht keinen Key.
  * Ausserhalb des Intranets lässt sich der Name nicht auflösen, die Anfrage scheitert einfach.
+ * Im Intranet fragt Chrome beim ersten Mal nach der Berechtigung «Lokales Netzwerk»; dafür muss
+ * diese Anfrage von der Seite kommen (der Torwächter lässt sie durch, siehe sw-policy.js).
  */
 export async function checkReachable() {
     state.status = 'pruefen';
+    await wakeGatekeeper();
+    const permission = await localNetworkPermission();
     try {
-        const response = await fetch(`${INTRANET_ORIGIN}/health`, { cache: 'no-store', signal: AbortSignal.timeout(CHECK_TIMEOUT_MS) });
+        const timeout = permission === 'prompt' ? PROMPT_TIMEOUT_MS : CHECK_TIMEOUT_MS;
+        const response = await fetch(`${INTRANET_ORIGIN}/health`, { cache: 'no-store', signal: AbortSignal.timeout(timeout) });
         state.status = response.ok && !isBlocked(response) ? 'erreichbar' : 'nicht-erreichbar';
     } catch {
-        state.status = 'nicht-erreichbar';
+        state.status = (await localNetworkPermission()) === 'denied' ? 'gesperrt' : 'nicht-erreichbar';
     }
     return state.status;
 }

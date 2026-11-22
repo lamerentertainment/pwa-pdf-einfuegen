@@ -114,6 +114,19 @@ export async function clearLog() {
     state.log = [];
 }
 
+/**
+ * Weckt den Torwächter, damit er den aktuellen Modus im Arbeitsspeicher hat. Nötig vor der
+ * Prüfung der internen KI, die er ohne Datenbankzugriff entscheiden muss (public/sw.js).
+ */
+export async function wakeGatekeeper() {
+    if (state.gatekeeper !== 'aktiv') return;
+    try {
+        applyMode(await send({ type: 'GET_STATUS' }));
+    } catch {
+        // ohne Antwort bleibt der Torwächter bei «lokal» und blockiert
+    }
+}
+
 /** Antwort des Torwächters auf eine blockierte Anfrage erkennen. */
 export function isBlocked(response) {
     return response.status === 503 && response.headers.get('X-Torwaechter') === 'blockiert';

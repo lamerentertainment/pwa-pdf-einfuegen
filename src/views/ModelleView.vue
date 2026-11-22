@@ -43,7 +43,7 @@ onActivated(refresh);
 // Interne KI: Erreichbarkeit nur im Modus «verbunden» prüfen (im Modus «lokal» wäre jede Anfrage blockiert)
 const keyInput = ref('');
 const keyBusy = ref(false);
-const showIntranet = computed(() => intranet.status === 'erreichbar' || Boolean(intranet.apiKey));
+const showIntranet = computed(() => ['erreichbar', 'gesperrt'].includes(intranet.status) || Boolean(intranet.apiKey));
 function probe() {
     if (connected.value && intranet.status !== 'pruefen') checkReachable();
 }
@@ -188,7 +188,17 @@ async function persist() {
           <span v-if="intranet.status === 'erreichbar'" class="text-success">Dieser Rechner erreicht die interne KI.</span>
           <span v-else-if="intranet.status === 'pruefen'" class="flex items-center gap-2"><span class="loading loading-spinner loading-xs" /> Erreichbarkeit wird geprüft …</span>
           <span v-else-if="intranet.status === 'nicht-erreichbar'" class="text-warning">Die interne KI ist von hier aus nicht erreichbar (nur im Intranet).</span>
+          <span v-else-if="intranet.status === 'gesperrt'" class="text-warning">
+            Chrome hat dieser Website den Zugriff auf das lokale Netzwerk nicht erlaubt. So änderst du das: links neben der
+            Adresse auf das Symbol klicken → «Website-Einstellungen» → «Lokales Netzwerk» auf «Zulassen» stellen, dann hier
+            «Erneut prüfen».
+          </span>
           <span v-else class="opacity-70">Erreichbarkeit wird geprüft, sobald die App verbunden ist.</span>
+          <button
+            v-if="connected && ['nicht-erreichbar', 'gesperrt'].includes(intranet.status)"
+            class="btn btn-xs ml-2"
+            @click="probe"
+          >Erneut prüfen</button>
         </p>
         <div role="alert" class="alert alert-info alert-soft">
           <span>
