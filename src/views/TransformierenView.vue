@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onActivated, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onActivated, onMounted, ref, watch } from 'vue';
 import { ArrowDownTrayIcon, ClipboardDocumentIcon, Cog6ToothIcon, DocumentArrowDownIcon, StopIcon, SparklesIcon } from '@heroicons/vue/24/outline';
 import { documentState } from '../capture/documentStore.js';
 import { joinPages } from '../capture/joinPages.js';
@@ -8,6 +8,7 @@ import { formatBytes, modelSize } from '../models/modelStore.js';
 import llm, { checkWebGPU, fillPrompt, installedLlms, LLM_MODELS } from '../llm/llmService.js';
 import { generateIntranet, INTRANET_ID, INTRANET_MODEL, intranet } from '../llm/intranet.js';
 import { connection } from '../net/connection.js';
+import { setzeEin, teileAuswahl } from '../llm/auswahl.js';
 import {
     EINGEBAUT, QUELLE, aenderePrompt, duplizierePrompt, findePrompt, gruppiert, istAusgeblendet, sichtbarePrompts,
 } from '../llm/promptBibliothek.js';
@@ -52,8 +53,19 @@ const choices = computed(() => [...installed.value, ...(intranetModel.value ? [i
 const model = computed(() => choices.value.find(m => m.id === modelId.value));
 const connected = computed(() => connection.mode === 'verbunden');
 const promptEdited = computed(() => promptTemplate.value !== preset.value.prompt);
-const canRun = computed(() => model.value && input.value.trim() && phase.value === 'idle'
-    && (model.value.remote ? connected.value : gpu.value?.ok));
+const ready = computed(() => model.value && phase.value === 'idle' && (model.value.remote ? connected.value : gpu.value?.ok));
+const canRun = computed(() => ready.value && input.value.trim());
+
+// Markierung im Eingabefeld: nur dieser Teil geht auf Wunsch an das Sprachmodell
+const auswahl = ref(null); // { start, end } oder null
+function merkeAuswahl() {
+    const el = inputEl.value;
+    if (!el) return;
+    const { selectionStart: start, selectionEnd: end } = el;
+    auswahl.value = end > start && el.value.slice(start, end).trim() ? { start, end } : null;
+}
+watch(input, () => nextTick(merkeAuswahl));
+const canRunAuswahl = computed(() => ready.value && auswahl.value);
 let controller = null;
 
 // Auch wenn ein eigener Prompt in der Bibliothek geändert wird; vorübergehende Anpassungen gehen dabei verloren
@@ -88,19 +100,30 @@ function fromStage2() {
     input.value = processState.output;
 }
 
-async function run() {
+/** Wendet den Prompt auf den ganzen Eingabetext an oder nur auf den markierten Teil. */
+async function run(bereich = null) {
     error.value = null;
-    output.value = '';
     stats.value = null;
+    // Mit Markierung: nur sie geht an das Modell, das Ergebnis ersetzt sie im ganzen Text
+    const teile = bereich ? teileAuswahl(input.value, bereich.start, bereich.end) : { vor: '', kern: input.value, nach: '' };
+    const prompt = fillPrompt(promptTemplate.value, teile.kern);
+    output.value = teile.vor;
+    const onToken = text => { output.value += text; };
+    const fertig = async result => {
+        output.value = setzeEin(teile, result.text);
+        if (!bereich) return;
+        // Die umgeformte Stelle im Ergebnis markieren
+        await nextTick();
+        const el = outputEl.value;
+        el?.focus();
+        el?.setSelectionRange(teile.vor.length, output.value.length - teile.nach.length);
+    };
     try {
         if (model.value.remote) {
             phase.value = 'erzeugen';
             controller = new AbortController();
-            const result = await generateIntranet(fillPrompt(promptTemplate.value, input.value), {
-                signal: controller.signal,
-                onToken: text => { output.value += text; },
-            });
-            output.value = result.text.trim();
+            const result = await generateIntranet(prompt, { signal: controller.signal, onToken });
+            await fertig(result);
             stats.value = { ...result, loadMs: 0 };
             return;
         }
@@ -112,10 +135,8 @@ async function run() {
         });
         loadedId.value = model.value.id;
         phase.value = 'erzeugen';
-        const result = await llm.generate(fillPrompt(promptTemplate.value, input.value), {
-            onToken: text => { output.value += text; },
-        });
-        output.value = result.text.trim();
+        const result = await llm.generate(prompt, { onToken });
+        await fertig(result);
         stats.value = { ...result, loadMs: loaded.ms };
     } catch (err) {
         error.value = err.message;
@@ -260,12 +281,25 @@ function download() {
               placeholder="Text, den das Sprachmodell umformen soll …"
               spellcheck="false"
               aria-label="Eingabe für das Sprachmodell"
+              @select="merkeAuswahl"
+              @keyup="merkeAuswahl"
+              @mouseup="merkeAuswahl"
             />
           </div>
           <div class="flex flex-wrap items-center gap-3">
-            <button v-if="phase === 'idle'" class="btn btn-primary btn-sm" :disabled="!canRun" @click="run">
-              <SparklesIcon class="size-4" /> Umformen
-            </button>
+            <template v-if="phase === 'idle'">
+              <button class="btn btn-primary btn-sm" :disabled="!canRun" @click="run()">
+                <SparklesIcon class="size-4" /> Umformen (Prompt anwenden)
+              </button>
+              <button
+                class="btn btn-sm"
+                :disabled="!canRunAuswahl"
+                :title="auswahl ? 'Nur der markierte Text geht an das Sprachmodell; das Ergebnis ersetzt ihn im ganzen Text.' : 'Zuerst im Eingabefeld Text markieren.'"
+                @click="run(auswahl)"
+              >
+                Nur auf markierten Bereich anwenden
+              </button>
+            </template>
             <button v-else class="btn btn-sm" :disabled="phase === 'laden'" @click="stop">
               <StopIcon class="size-4" /> Stoppen
             </button>

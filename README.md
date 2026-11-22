@@ -50,6 +50,9 @@ Die App ist Open Source, damit jede und jeder nachprüfen kann, was sie tut.
    Ausführen ansehen und anpassen. In der *Promptbibliothek* (Zahnrad neben der Auswahl) lassen sich
    eigene Prompts anlegen, eingebaute als Vorlage verwenden oder ausblenden; eigene bleiben im Browser
    und lassen sich als .json exportieren und importieren ([`src/llm/promptBibliothek.js`](src/llm/promptBibliothek.js)).
+   Markiert man im Eingabefeld einen Teil des Texts, wendet «Nur auf markierten Bereich anwenden» den
+   Prompt nur darauf an; das Ergebnis ersetzt die Stelle im sonst unveränderten Text und ist im
+   Ergebnisfeld markiert ([`src/llm/auswahl.js`](src/llm/auswahl.js)).
    Das Ergebnis ist ein Entwurf und muss geprüft werden.
 
 ## Zum Ausprobieren
