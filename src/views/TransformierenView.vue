@@ -6,6 +6,8 @@ import { joinPages } from '../capture/joinPages.js';
 import { processState } from '../process/processStore.js';
 import { formatBytes, modelSize } from '../models/modelStore.js';
 import llm, { checkWebGPU, fillPrompt, installedLlms, LLM_MODELS } from '../llm/llmService.js';
+import { generateIntranet, INTRANET_ID, INTRANET_MODEL, intranet } from '../llm/intranet.js';
+import { connection } from '../net/connection.js';
 import {
     EINGEBAUT, QUELLE, aenderePrompt, duplizierePrompt, findePrompt, gruppiert, istAusgeblendet, sichtbarePrompts,
 } from '../llm/promptBibliothek.js';
@@ -39,9 +41,20 @@ const groups = computed(() => gruppiert(sichtbarePrompts()));
 // Gelöscht oder ausgeblendet: der erste sichtbare Prompt (oder, wenn alle ausgeblendet sind, der erste eingebaute)
 const preset = computed(() => (!istAusgeblendet(presetId.value) && findePrompt(presetId.value)) || sichtbarePrompts()[0] || EINGEBAUT[0]);
 watch(preset, p => { if (p.id !== presetId.value) presetId.value = p.id; }, { immediate: true });
-const model = computed(() => installed.value.find(m => m.id === modelId.value));
+// Die interne KI steht zur Wahl, sobald unter «Modelle/Programmupdate» ein API-Key gespeichert ist
+const intranetModel = computed(() => (intranet.apiKey ? {
+    id: INTRANET_ID,
+    name: `Interne KI · ${INTRANET_MODEL}`,
+    purpose: 'Läuft auf dem Server im Intranet, nicht in diesem Browser. Der Eingabetext wird dorthin gesendet.',
+    remote: true,
+} : null));
+const choices = computed(() => [...installed.value, ...(intranetModel.value ? [intranetModel.value] : [])]);
+const model = computed(() => choices.value.find(m => m.id === modelId.value));
+const connected = computed(() => connection.mode === 'verbunden');
 const promptEdited = computed(() => promptTemplate.value !== preset.value.prompt);
-const canRun = computed(() => gpu.value?.ok && model.value && input.value.trim() && phase.value === 'idle');
+const canRun = computed(() => model.value && input.value.trim() && phase.value === 'idle'
+    && (model.value.remote ? connected.value : gpu.value?.ok));
+let controller = null;
 
 // Auch wenn ein eigener Prompt in der Bibliothek geändert wird; vorübergehende Anpassungen gehen dabei verloren
 watch(() => preset.value.prompt, p => { promptTemplate.value = p; }, { immediate: true });
@@ -58,8 +71,9 @@ function imPromptSpeichern() {
 
 async function refresh() {
     installed.value = await installedLlms();
-    if (!installed.value.some(m => m.id === modelId.value)) modelId.value = installed.value[0]?.id ?? '';
+    if (!choices.value.some(m => m.id === modelId.value)) modelId.value = choices.value[0]?.id ?? '';
 }
+watch(() => intranet.apiKey, refresh);
 onMounted(async () => {
     gpu.value = await checkWebGPU();
     await refresh();
@@ -79,6 +93,17 @@ async function run() {
     output.value = '';
     stats.value = null;
     try {
+        if (model.value.remote) {
+            phase.value = 'erzeugen';
+            controller = new AbortController();
+            const result = await generateIntranet(fillPrompt(promptTemplate.value, input.value), {
+                signal: controller.signal,
+                onToken: text => { output.value += text; },
+            });
+            output.value = result.text.trim();
+            stats.value = { ...result, loadMs: 0 };
+            return;
+        }
         phase.value = 'laden';
         loadInfo.value = `${model.value.name} wird in den Grafikspeicher geladen …`;
         loadedId.value = null;
@@ -98,11 +123,13 @@ async function run() {
     } finally {
         phase.value = 'idle';
         loadInfo.value = '';
+        controller = null;
     }
 }
 
 function stop() {
-    llm.stop();
+    if (controller) controller.abort();
+    else llm.stop();
 }
 
 function unload() {
@@ -134,15 +161,21 @@ function download() {
           Es läuft vollständig in diesem Browser auf der Grafikkarte, ohne Internet. Das Ergebnis ist ein Entwurf und muss immer geprüft werden.
         </p>
 
-        <div v-if="gpu && !gpu.ok" role="alert" class="alert alert-warning alert-soft text-sm">
+        <div v-if="gpu && !gpu.ok && !model?.remote" role="alert" class="alert alert-warning alert-soft text-sm">
           <span>{{ gpu.reason }} Stufe 3 braucht WebGPU, zum Beispiel ein aktuelles Chrome oder Edge. Stufe 1 und 2 funktionieren trotzdem.</span>
+        </div>
+        <div v-if="model?.remote" role="alert" class="alert alert-info alert-soft text-sm">
+          <span>
+            Gewählt ist die <strong>interne KI</strong>: Der Eingabetext wird an den Server im Intranet gesendet und dort verarbeitet.
+            <template v-if="!connected"> Dafür oben zuerst «Internetverbindung herstellen» wählen.</template>
+          </span>
         </div>
 
         <div class="grid gap-4 md:grid-cols-2">
           <!-- Modell -->
           <div class="space-y-2">
             <p class="text-sm font-semibold">Sprachmodell</p>
-            <div v-if="!installed.length" class="rounded-box border border-base-300 p-3 text-sm">
+            <div v-if="!choices.length" class="rounded-box border border-base-300 p-3 text-sm">
               <p>Noch kein Sprachmodell installiert. Zur Wahl stehen:</p>
               <ul class="mt-1 list-disc pl-5 text-xs opacity-80">
                 <li v-for="m in LLM_MODELS" :key="m.id">{{ m.name }} ({{ formatBytes(modelSize(m)) }})</li>
@@ -151,11 +184,11 @@ function download() {
             </div>
             <template v-else>
               <select v-model="modelId" class="select select-sm w-full" aria-label="Sprachmodell" :disabled="phase !== 'idle'">
-                <option v-for="m in installed" :key="m.id" :value="m.id">{{ m.name }} · {{ formatBytes(modelSize(m)) }}</option>
+                <option v-for="m in choices" :key="m.id" :value="m.id">{{ m.name }}{{ m.remote ? '' : ` · ${formatBytes(modelSize(m))}` }}</option>
               </select>
               <p v-if="model" class="text-xs opacity-70">{{ model.purpose }}</p>
               <div class="flex flex-wrap items-center gap-3 text-xs">
-                <span v-if="gpu?.ok" class="opacity-70">Grafikkarte: {{ gpu.name || 'WebGPU bereit' }}</span>
+                <span v-if="gpu?.ok && !model?.remote" class="opacity-70">Grafikkarte: {{ gpu.name || 'WebGPU bereit' }}</span>
                 <button v-if="loadedId" class="link" :disabled="phase !== 'idle'" @click="unload">Modell aus dem Grafikspeicher entfernen</button>
                 <button class="link" @click="emit('navigate', 'modelle')">Weitere Modelle</button>
               </div>
@@ -238,7 +271,7 @@ function download() {
             </button>
             <span v-if="phase === 'laden'" class="flex items-center gap-2 text-xs opacity-80"><span class="loading loading-spinner loading-xs" /> {{ loadInfo }}</span>
             <span v-if="phase === 'erzeugen'" class="flex items-center gap-2 text-xs opacity-80"><span class="loading loading-dots loading-xs" /> Text wird erzeugt …</span>
-            <span v-if="!model && installed.length === 0" class="text-xs opacity-60">Zuerst ein Sprachmodell installieren.</span>
+            <span v-if="!model && choices.length === 0" class="text-xs opacity-60">Zuerst ein Sprachmodell installieren.</span>
           </div>
         </div>
       </section>

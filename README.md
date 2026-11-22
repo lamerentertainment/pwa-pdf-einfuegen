@@ -71,14 +71,15 @@ Alle Personen, Orte und Geschäftsnummern in den Beispielen sind frei erfunden.
 | Modus | Netzwerk | Wofür |
 |---|---|---|
 | **Lokal** (Standard, nach jedem Start) | keine einzige Anfrage | Erfassen, Prüfen, Verarbeiten |
-| **Verbunden** (nur auf Knopfdruck, endet automatisch) | nur Abrufe, nur zu dieser Website und zu Hugging Face | App-Update, Modelle laden |
+| **Verbunden** (nur auf Knopfdruck, endet automatisch) | nur Abrufe, nur zu dieser Website und zu Hugging Face; im Intranet zusätzlich die interne KI | App-Update, Modelle laden, interne KI |
 
 So ist das umgesetzt, und hier lässt es sich nachprüfen:
 
 - **Torwächter** ([`public/sw.js`](public/sw.js)): Ein Service Worker beantwortet jede Anfrage der
   App aus dem Browser-Speicher oder entscheidet nach den Regeln in
   [`public/sw-policy.js`](public/sw-policy.js). Im Modus Lokal wird alles blockiert, im Modus Verbunden
-  sind nur `GET`-Abrufe zu freigegebenen Zielen erlaubt. Die App sendet nie Daten.
+  sind nur `GET`-Abrufe zu freigegebenen Zielen erlaubt. Die App sendet keine Daten, mit einer
+  Ausnahme (siehe *Interne KI*).
 - **Content Security Policy** ([`csp.js`](csp.js)): Der Browser selbst verbietet Verbindungen zu
   allen anderen Servern, unabhängig vom Code der App.
 - **Verbindungsprotokoll**: Jede Netzwerkanfrage, ob erlaubt oder blockiert, erscheint in der App
@@ -97,6 +98,15 @@ So ist das umgesetzt, und hier lässt es sich nachprüfen:
   gemeinsamer Bestandteil mit SHA-256 im Modellkatalog
   ([`scripts/models/pin-runtime.mjs`](scripts/models/pin-runtime.mjs), der Build prüft die Übereinstimmung),
   kommt mit dem ersten Sprachmodell und geht mit dem letzten.
+- **Interne KI** ([`src/llm/intranet.js`](src/llm/intranet.js)): Im Intranet bietet die App in
+  Stufe 3 zusätzlich `gemma4:31b` auf dem internen OpenWebUI (`aiacoder-v001.kt.lunet.ch`) an. Im
+  Modus Verbunden prüft die Seite *Modelle/Programmupdate*, ob der Server erreichbar ist (`/health`,
+  ohne Key); ausserhalb des Intranets scheitert diese Anfrage einfach. Aktiv wird die interne KI erst,
+  wenn man dort den eigenen API-Key einträgt (OpenWebUI → Einstellungen → Konto → API-Schlüssel); er
+  bleibt in diesem Browser. Die App liefert keinen Key mit. Wer sie wählt und «Umformen» drückt,
+  schickt den Eingabetext an diesen Server: Der Torwächter erlaubt dafür `POST` an genau
+  `/api/chat/completions`, sonst nur `GET` an `/health` und `/api/models`, und alles nur im Modus
+  Verbunden. Der Server muss die Origin der App per CORS zulassen.
 - **Nachvollziehbarer Build**: Veröffentlicht wird nur per [GitHub Action](.github/workflows/deploy.yml)
   aus diesem Repository. Die App zeigt in der Fusszeile den Commit, aus dem sie gebaut wurde.
 

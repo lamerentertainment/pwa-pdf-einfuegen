@@ -20,9 +20,14 @@ describe('Content Security Policy', () => {
         expect(header).toBe(`${CSP}; frame-ancestors 'none'`);
     });
 
-    it('erlaubt Verbindungen nur zur eigenen Website und zu Hugging Face', () => {
+    it('erlaubt Verbindungen nur zur eigenen Website, zu Hugging Face und zur internen KI', () => {
         const connect = CSP.split('; ').find(d => d.startsWith('connect-src')).split(' ').slice(1);
-        expect(connect).toEqual(["'self'", 'https://huggingface.co', 'https://*.huggingface.co', 'https://*.hf.co']);
+        expect(connect).toEqual(["'self'", 'https://huggingface.co', 'https://*.huggingface.co', 'https://*.hf.co', policy.INTRANET_ORIGIN]);
+    });
+
+    it('nennt die interne KI überall mit derselben Adresse', async () => {
+        const { INTRANET_ORIGIN } = await import('../src/llm/intranet.js');
+        expect(INTRANET_ORIGIN).toBe(policy.INTRANET_ORIGIN);
     });
 });
 

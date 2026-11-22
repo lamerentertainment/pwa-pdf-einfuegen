@@ -75,3 +75,35 @@ describe('Verbunden-Modus', () => {
         expect(decide(HF, 'verbunden', 'HEAD').allow).toBe(true);
     });
 });
+
+describe('Interne KI (Intranet)', () => {
+    const BASE = 'https://aiacoder-v001.kt.lunet.ch';
+
+    it('ist im Lokal-Modus gesperrt, auch die Prüfung', () => {
+        expect(decide(`${BASE}/health`, 'lokal').allow).toBe(false);
+        expect(decide(`${BASE}/api/chat/completions`, 'lokal', 'POST').allow).toBe(false);
+    });
+
+    it('erlaubt im Verbunden-Modus die Prüfung und das Senden an die Textschnittstelle', () => {
+        expect(decide(`${BASE}/health`, 'verbunden')).toMatchObject({ allow: true, purpose: 'intern-pruefung' });
+        expect(decide(`${BASE}/api/models`, 'verbunden')).toMatchObject({ allow: true, purpose: 'intern-pruefung' });
+        expect(decide(`${BASE}/api/chat/completions`, 'verbunden', 'POST')).toMatchObject({ allow: true, purpose: 'intern-ki' });
+    });
+
+    it('sendet nur an die Textschnittstelle und ruft diese nicht ab', () => {
+        expect(decide(`${BASE}/health`, 'verbunden', 'POST').allow).toBe(false);
+        expect(decide(`${BASE}/api/models`, 'verbunden', 'DELETE').allow).toBe(false);
+        expect(decide(`${BASE}/api/chat/completions`, 'verbunden', 'GET').allow).toBe(false);
+    });
+
+    it.each([
+        `${BASE}/api/v1/files/`,
+        `${BASE}/ollama/api/generate`,
+        `${BASE}/`,
+        'https://aiacoder-v001.kt.lunet.ch.evil.example/api/chat/completions',
+        'http://aiacoder-v001.kt.lunet.ch/api/chat/completions',
+    ])('blockiert alles andere: %s', url => {
+        expect(decide(url, 'verbunden', 'POST').allow).toBe(false);
+        expect(decide(url, 'verbunden', 'GET').allow).toBe(false);
+    });
+});

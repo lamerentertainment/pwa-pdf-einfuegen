@@ -1,11 +1,14 @@
 <script setup>
-import { computed, onActivated, onMounted, reactive, ref } from 'vue';
+import { computed, onActivated, onMounted, reactive, ref, watch } from 'vue';
 import {
     applyUpdate, BUILD, checkForUpdate, connection, downloadUpdate,
 } from '../net/connection.js';
 import ocrService from '../ocr/ocrService.js';
 import ModelInfo from '../components/ModelInfo.vue';
 import { checkWebGPU } from '../llm/llmService.js';
+import {
+    checkKey, checkReachable, INTRANET_MODEL, INTRANET_ORIGIN, intranet, setApiKey,
+} from '../llm/intranet.js';
 import {
     componentsOf, download, formatBytes, getStatus, missingSize, models, modelSize, remove, requestPersistence, storageInfo, verify,
 } from '../models/modelStore.js';
@@ -36,6 +39,36 @@ onMounted(async () => {
     gpu.value = await checkWebGPU();
 });
 onActivated(refresh);
+
+// Interne KI: Erreichbarkeit nur im Modus «verbunden» prüfen (im Modus «lokal» wäre jede Anfrage blockiert)
+const keyInput = ref('');
+const keyBusy = ref(false);
+const showIntranet = computed(() => intranet.status === 'erreichbar' || Boolean(intranet.apiKey));
+function probe() {
+    if (connected.value && intranet.status !== 'pruefen') checkReachable();
+}
+watch(connected, probe, { immediate: true });
+onActivated(probe);
+
+async function saveKey() {
+    setApiKey(keyInput.value);
+    keyInput.value = '';
+    keyBusy.value = true;
+    try {
+        await checkKey();
+    } finally {
+        keyBusy.value = false;
+    }
+}
+
+async function testKey() {
+    keyBusy.value = true;
+    try {
+        await checkKey();
+    } finally {
+        keyBusy.value = false;
+    }
+}
 
 function report(row, message, error = false) {
     row.message = message;
@@ -136,6 +169,66 @@ async function persist() {
           <p>Die neue Version ist geladen. Sie wird beim Neuladen aktiv.</p>
           <button class="btn btn-sm btn-primary mt-2" @click="applyUpdate">Jetzt neu laden</button>
         </div>
+      </div>
+    </section>
+
+    <section v-if="showIntranet" class="card bg-base-100 shadow-sm" data-intranet>
+      <div class="card-body gap-3 text-sm">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 class="card-title">Interne KI (Intranet)</h2>
+            <p class="opacity-80">{{ INTRANET_MODEL }} auf <code>{{ INTRANET_ORIGIN.replace('https://', '') }}</code></p>
+          </div>
+          <span
+            class="badge"
+            :class="intranet.apiKey ? 'badge-success' : 'badge-ghost'"
+          >{{ intranet.apiKey ? '✓ Eingerichtet' : 'Nicht eingerichtet' }}</span>
+        </div>
+        <p>
+          <span v-if="intranet.status === 'erreichbar'" class="text-success">Dieser Rechner erreicht die interne KI.</span>
+          <span v-else-if="intranet.status === 'pruefen'" class="flex items-center gap-2"><span class="loading loading-spinner loading-xs" /> Erreichbarkeit wird geprüft …</span>
+          <span v-else-if="intranet.status === 'nicht-erreichbar'" class="text-warning">Die interne KI ist von hier aus nicht erreichbar (nur im Intranet).</span>
+          <span v-else class="opacity-70">Erreichbarkeit wird geprüft, sobald die App verbunden ist.</span>
+        </p>
+        <div role="alert" class="alert alert-info alert-soft">
+          <span>
+            Anders als die Modelle unten läuft die interne KI nicht im Browser: Der Eingabetext von Stufe 3 geht an den
+            Server im Intranet, und nur dorthin. Das geschieht nur im Modus <strong>Verbunden</strong>, wenn du in Stufe 3
+            die interne KI wählst und «Umformen» drückst. Jede Anfrage erscheint im Verbindungsprotokoll.
+          </span>
+        </div>
+
+        <template v-if="!intranet.apiKey">
+          <p>
+            Zum Einrichten deinen persönlichen API-Key eintragen. Du findest ihn in OpenWebUI unter
+            <em>Einstellungen → Konto → API-Schlüssel</em>. Er wird nur in diesem Browser gespeichert.
+          </p>
+          <form class="flex flex-wrap items-center gap-2" @submit.prevent="saveKey">
+            <input
+              v-model="keyInput"
+              type="password"
+              class="input input-sm w-80 max-w-full"
+              placeholder="sk-…"
+              autocomplete="off"
+              aria-label="API-Key der internen KI"
+            />
+            <button class="btn btn-sm btn-primary" :disabled="!keyInput.trim()">Speichern</button>
+          </form>
+        </template>
+        <template v-else>
+          <p>
+            In «3 · Text mit lokalen Mini-LLMs transformieren» unter «Sprachmodell» als <strong>Interne KI · {{ INTRANET_MODEL }}</strong> wählbar.
+            Der API-Key ist in diesem Browser gespeichert (endet auf <code>…{{ intranet.apiKey.slice(-4) }}</code>).
+          </p>
+          <div class="flex flex-wrap items-center gap-2">
+            <button class="btn btn-sm" :disabled="!connected || keyBusy" @click="testKey">Verbindung testen</button>
+            <button class="btn btn-sm btn-ghost text-error" :disabled="keyBusy" @click="setApiKey('')">API-Key löschen</button>
+            <span v-if="keyBusy" class="loading loading-spinner loading-xs" />
+            <span v-if="!connected" class="text-xs opacity-60">Zum Testen oben «Internetverbindung herstellen» wählen.</span>
+          </div>
+        </template>
+        <p v-if="intranet.keyCheck?.ok" class="text-success">API-Key gültig, {{ INTRANET_MODEL }} ist verfügbar.</p>
+        <p v-else-if="intranet.keyCheck" class="text-error">{{ intranet.keyCheck.error }}</p>
       </div>
     </section>
 

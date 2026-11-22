@@ -44,7 +44,8 @@ function target(entry) {
             <h3 class="font-semibold text-warning">Verbunden (nur auf Knopfdruck)</h3>
             <p class="opacity-80">
               Erlaubt nur Abrufe, und nur zu dieser Website (App-Update) und zu Hugging Face (Modelle). Die App sendet
-              keine Daten. Die Verbindung endet automatisch.
+              keine Daten, ausser du nutzt in Stufe 3 die interne KI: Dann geht der Eingabetext an den Server im
+              Intranet (<code>aiacoder-v001.kt.lunet.ch</code>), und nur dorthin. Die Verbindung endet automatisch.
             </p>
           </div>
         </div>

@@ -61,10 +61,12 @@ async function disconnect() {
         <p class="mt-3 text-sm">Im Modus <strong>Verbunden</strong> darf die App:</p>
         <ul class="mt-1 list-disc pl-5 text-sm">
           <li>nach einer neuen App-Version suchen und sie laden, wenn du das willst,</li>
-          <li>Modelle laden, die du auf der Seite <em>Modelle/Programmupdate</em> auswählst.</li>
+          <li>Modelle laden, die du auf der Seite <em>Modelle/Programmupdate</em> auswählst,</li>
+          <li>prüfen, ob die interne KI im Intranet erreichbar ist.</li>
         </ul>
         <p class="mt-3 text-sm">
-          Deine Dokumente verlassen den Browser nie. Die App sendet keine Daten, sie ruft nur ab.
+          Deine Dokumente verlassen den Browser nicht. Einzige Ausnahme: Wählst du in Stufe 3 die
+          <em>interne KI</em> und drückst «Umformen», geht der Eingabetext an den Server im Intranet, und nur dorthin.
           Jede Verbindung erscheint im Verbindungsprotokoll.
         </p>
         <label class="mt-4 flex items-center gap-3 text-sm">
