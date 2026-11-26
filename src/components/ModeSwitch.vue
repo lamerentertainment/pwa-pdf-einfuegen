@@ -52,9 +52,9 @@ async function disconnect() {
     <div
       v-if="!connected"
       class="badge badge-success gap-1 py-3"
-      title="Die App stellt keine Internetverbindung her. Alles läuft in diesem Browser."
+      title="Die App startet und funktioniert ohne Internetverbindung."
     >
-      <LockClosedIcon class="size-4" /> Lokal
+      <LockClosedIcon class="size-4" /> Lokal (offline)
     </div>
     <div v-else class="badge badge-warning gap-1 py-3" title="Die App darf Updates und Modelle laden.">
       <GlobeAltIcon class="size-4" /> Verbunden · {{ remaining }}
